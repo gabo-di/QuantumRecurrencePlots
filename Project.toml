@@ -3,6 +3,11 @@ name = "QuantumRecurrencePlots"
 [deps]
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
