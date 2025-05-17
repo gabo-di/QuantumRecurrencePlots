@@ -2,10 +2,11 @@ module QuantumRecurrencePlots
 
 # ---- imports ----
 using Revise
-using LinearAlgebra
+using LinearAlgebra, SparseArrays
 using UnPack
 using FFTW
-using Gridap
+using Gmsh
+using Gridap, GridapGmsh
 using FastGaussQuadrature
 
 
@@ -20,7 +21,9 @@ export make_ε_x,
        Laguerre,
        Legendre,
        Hermite,
-       Chebyshev
+       Hermite_hat,
+       Chebyshev,
+       MSV_matrix_1D
 
 
 end

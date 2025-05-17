@@ -1,4 +1,26 @@
 """
+    δ = kronecker(n::Int, m::Int)
+
+Delta kronecker
+"""
+function kronecker(n::Int, m::Int)
+    if n==m
+        return 1
+    else
+        return 0
+    end
+end
+
+"""
+    a = truncate_matrix(a, i=1, j=1)
+
+Returns the matrix dropping the last i rows and j columns.
+"""
+function truncate_matrix(a, i=1, j=1)
+    return a[1:end-i, 1:end-j]
+end
+
+"""
     p = make_ε_x(p)
 
 calculates and saves the parameter ε_x in p

@@ -18,13 +18,6 @@ struct PolyBasis{name, F0, F1, A0, A1, A2, FW, FN}
 
 end
 
-function kronecker(n::Int, m::Int)
-    if n==m
-        return 1
-    else
-        return 0
-    end
-end
 
 """
     y = (basis::PolyBasis)(x::AbstractArray{T}) where {T}
