@@ -1,6 +1,7 @@
 module QuantumRecurrencePlots
 
 # ---- imports ----
+using DrWatson
 using Revise
 using LinearAlgebra, SparseArrays
 using UnPack
@@ -8,12 +9,14 @@ using FFTW
 using Gmsh
 using Gridap, GridapGmsh
 using FastGaussQuadrature
+using SpecialFunctions
+using Roots
 
 
 # ---- includes ----
-includet("utils.jl")
-includet("PolynomialUtils.jl")
-includet("SchrodingerMatrix.jl")
+include("utils.jl")
+include("PolynomialUtils.jl")
+include("SchrodingerMatrix.jl")
 
 # ---- exports ----
 export make_ε_x,
@@ -23,7 +26,12 @@ export make_ε_x,
        Hermite,
        Hermite_hat,
        Chebyshev,
-       MSV_matrix_1D
+       MSV_matrix_1D,
+       MSV_matrix_2D,
+       elliptic_billiard,
+       robnik_billiard,
+       make_gmsh_billiard,
+       initialize_gridap
 
 
 end

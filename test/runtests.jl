@@ -1,11 +1,12 @@
 using DrWatson, Test
 @quickactivate "QuantumRecurrencePlots"
+using QuantumRecurrencePlots
 
 using FastGaussQuadrature
 using LinearAlgebra
+using Arpack
 
 # Here you include files using `srcdir`
-includet(srcdir("QuantumRecurrencePlots.jl"))
 
 # Run test suite
 println("Starting tests")
@@ -79,7 +80,7 @@ end
         x, w = gausshermite(n, normalize=true);
         a = Hermite(m);
         M, S, V = MSV_matrix_1D(x,w,a,x->x^2/4);
-        k = eigen(truncate_matrix(S+V), truncate_matrix(M));    
+        k = eigen(QuantumRecurrencePlots.truncate_matrix(S+V), QuantumRecurrencePlots.truncate_matrix(M));    
         @test isapprox(k.values, [0.5 + i for i in 0:(m-2)], atol=1e-8)
     end
 
@@ -89,32 +90,30 @@ end
         x, w = gausshermite(n, normalize=true);
         a = Hermite_hat(m);
         M, S, V = MSV_matrix_1D(x,w,a,x->x^2/4);
-        k = eigen(truncate_matrix(S+V)); 
+        k = eigen(QuantumRecurrencePlots.truncate_matrix(S+V)); 
         @test isapprox(k.values, [0.5 + i for i in 0:(m-2)], atol=1e-8)
 
         # eigen values do not change but approximation for higher modes is bad
-        k = eigen(truncate_matrix(S/2+2*V)); 
+        k = eigen(QuantumRecurrencePlots.truncate_matrix(S/2+2*V)); 
         ss = 30;
         @test isapprox(k.values[1:ss], [0.5 + i for i in 0:(ss-1)], atol=1e-8)
 
 
         # eigenvalues do change
-        k = eigen(truncate_matrix(S/4+V)); 
+        k = eigen(QuantumRecurrencePlots.truncate_matrix(S/4+V)); 
         ss = 30;
         @test isapprox(k.values[1:ss], [0.25 + 0.5*i for i in 0:(ss-1)], atol=1e-8)
     end
 end
 
 @testset "Circular billiard" begin
-    @testset "Dirichlet boundary" begin
+    @testset "Make circular billiard" begin
         # parmeters for gmsh
         p_gmsh =  ( nθ = 400, # sampling resolution of boundary curve should be high enough for smooth CAD curve
                     l_min = 0.01, # min characteristic length
                     l_max = 0.02); # max characteristic length
 
         # parameters for billiard boundary
-        # p_bill    = (R = 1.0, ε = 0.0);   # Robnik with ε=0.2  (ε=0 → circle)
-        p_bill    = (a = 1.0, b = sqrt(0.51));   # Elliptic (a=1, b=1 → circle)
         p_bill    = (a = 1.0, b = 1.0);   # Elliptic (a=1, b=1 → circle)
 
         # parameters for gridap
@@ -129,8 +128,31 @@ end
 
         # create the billiard mesh with gmsh
         rho = elliptic_billiard;
-        name = "elliptic_billiard";
+        name = "circular_billiard";
         gmsh_file = make_gmsh_billiard(rho, name, p);
+        @test isequal(gmsh_file, datadir("billiards", "circular_billiard.msh"))
+    end
+
+    @testset "Dirichlet boundary" begin
+        # parmeters for gmsh
+        p_gmsh =  ( nθ = 400, # sampling resolution of boundary curve should be high enough for smooth CAD curve
+                    l_min = 0.01, # min characteristic length
+                    l_max = 0.02); # max characteristic length
+
+        # parameters for billiard boundary
+        p_bill    = (a = 1.0, b = 1.0);   # Elliptic (a=1, b=1 → circle)
+
+        # parameters for gridap
+        p_gridap = (order = 3, # cubic Lagrange elements
+                    bc_type = :Dirichlet  # boundary type :Dirichlet  or :Neumann
+                    );
+
+        # gather parameters
+        p = (p_gmsh = p_gmsh,
+             p_bill = p_bill,
+             p_gridap = p_gridap);
+
+        gmsh_file = datadir("billiards", "circular_billiard.msh")
 
         # read file and create FE space on gridap
         model, V = initialize_gridap(gmsh_file, p);
@@ -142,7 +164,7 @@ end
         λ, ψ_coeffs = eigs(S/2, M; nev=10, which=:LR,check=1,maxiter=1000,tol=1e-6, sigma=1.0e-6) # smalle
         
         # theoretical values
-        l = vcat(approx_besselroots(0,2) .^2 ./ 2, approx_besselroots(1,2) .^ 2 ./ 2, approx_besselroots(2,2) .^ 2 ./ 2, approx
+        l = vcat([approx_besselroots(i,2) .^2 ./2 for i in 0:3]...)
         sort!(l)
 
         atol = p_gmsh.l_min
@@ -164,8 +186,6 @@ end
                     l_max = 0.02); # max characteristic length
 
         # parameters for billiard boundary
-        # p_bill    = (R = 1.0, ε = 0.0);   # Robnik with ε=0.2  (ε=0 → circle)
-        p_bill    = (a = 1.0, b = sqrt(0.51));   # Elliptic (a=1, b=1 → circle)
         p_bill    = (a = 1.0, b = 1.0);   # Elliptic (a=1, b=1 → circle)
 
         # parameters for gridap
@@ -178,10 +198,7 @@ end
              p_bill = p_bill,
              p_gridap = p_gridap);
 
-        # create the billiard mesh with gmsh
-        rho = elliptic_billiard;
-        name = "elliptic_billiard";
-        gmsh_file = make_gmsh_billiard(rho, name, p);
+        gmsh_file = datadir("billiards", "circular_billiard.msh")
 
         # read file and create FE space on gridap
         model, V = initialize_gridap(gmsh_file, p);
@@ -193,21 +210,19 @@ end
         λ, ψ_coeffs = eigs(S/2, M; nev=10, which=:LR,check=1,maxiter=1000,tol=1e-6, sigma=1.0e-6) # smalle
         
         # theoretical values
-        l = vcat(approx_besselroots(0,2) .^2 ./ 2, approx_besselroots(1,2) .^ 2 ./ 2, approx_besselroots(2,2) .^ 2 ./ 2, approx
+        l = vcat([QuantumRecurrencePlots.besseljprime_zeros(i,2) .^2 ./2 for i in 0:5]...);
         sort!(l)
 
         atol = p_gmsh.l_min
         
         @test isapprox(λ[1], l[1]; atol=atol)
-        @test isapprox(λ[2], l[2]; atol=atol)
+        @test isapprox(λ[2], l[1]; atol=atol)
         @test isapprox(λ[3], l[2]; atol=atol)
         @test isapprox(λ[4], l[3]; atol=atol)
-        @test isapprox(λ[5], l[3]; atol=atol)
-        @test isapprox(λ[6], l[4]; atol=atol)
-        # some times does not finde the degenerate eigenvalue
-        @test isapprox(λ[7], l[5]; atol=atol)
+        @test isapprox(λ[5], l[4]; atol=atol)
+        @test isapprox(λ[6], l[5]; atol=atol)
+        @test isapprox(λ[7], l[6]; atol=atol)
     end
-
 end
 
 ti = time() - ti

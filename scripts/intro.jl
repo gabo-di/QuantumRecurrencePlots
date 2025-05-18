@@ -10,13 +10,14 @@
 using Revise
 using DrWatson
 @quickactivate "QuantumRecurrencePlots"
+using QuantumRecurrencePlots
 using UnPack
 using Gmsh
 using Gridap, GridapGmsh
 using LinearAlgebra, SparseArrays
 using Arpack, JacobiDavidson, KrylovKit
 
-includet(srcdir("QuantumRecurrencePlots.jl"))
+# includet(srcdir("QuantumRecurrencePlots.jl"))
 
 # parmeters for gmsh
 p_gmsh =  ( nθ = 400, # sampling resolution of boundary curve should be high enough for smooth CAD curve

@@ -1,6 +1,4 @@
 function MSV_matrix_1D(x, w, a::PolyBasis{:hermite}, f=nothing)
-    # no = [1/sqrt(a.f_norm(i,i)) for i in 0:(a.n-1)];
-    # V = a(x) .* no';
     V = a(x);
     n = size(V,2)
     M = zeros(n,n)
@@ -11,7 +9,7 @@ function MSV_matrix_1D(x, w, a::PolyBasis{:hermite}, f=nothing)
             m = dot(w, V[:,i+1] .* V[:,j+1])
 
             s = 1/4*kronecker(j+1,i+1)*dot(w, V[:,i+1].*V[:,i+1])*(i+1) - j/4*kronecker(j-1,i+1)*dot(w, V[:,i+1].*V[:,i+1])*(i+1) - i/4*kronecker(j+1,i-1)*dot(w, V[:,j+1].*V[:,j+1])*(j+1)
-if i>1
+            if i>1
                 s += i*j/4*kronecker(j-1,i-1)*dot(w, V[:,i-1].*V[:,i-1])*(i-1)
             elseif i==1
                 s += i*j/4*kronecker(j-1,i-1) 
@@ -76,13 +74,6 @@ function MSV_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Ge
     a_M(u,v) = ∫( u*v )*dΩ        # Mass matrix
     a_S(u,v) = ∫( ∇(u)⋅∇(v) )*dΩ  # Stiffness matrix
 
-    # take care of boundary
-    if bc_type == :Neumann
-        Γ = BoundaryTriangulation(model, tags="billiard_wall")
-        dΓ = Measure(Γ, degree)
-    end
-
-
     # Assemble sparse mass (M) and stiffness (S) matrices
     U = TrialFESpace(V)  # Create trial space from the test spaces
     # Assemble the matrices
@@ -92,7 +83,7 @@ function MSV_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Ge
     # take care of potential energy
     if !isnothing(f)
         p_M(u,v) = ∫( u*f*v )*dΩ        # Potential Energy matrix
-        P = assemble_matrix(p_M, U, V)*dΩ
+        P = assemble_matrix(p_M, U, V)
     else
         P = nothing
     end

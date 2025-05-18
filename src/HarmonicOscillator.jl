@@ -1,6 +1,3 @@
-using UnPack
-using FFTW
-
 function harmonicPotential_1D(u, p, x, t) 
     @unpack ε_t, ε_x, π_k = p
     return 1/4 * π_k * (ε_t^2/ε_x)^2 * x.^2
