@@ -1,3 +1,7 @@
+#################
+# General Stuff #
+#################
+
 """
     δ = kronecker(n::Int, m::Int)
 
@@ -11,14 +15,22 @@ function kronecker(n::Int, m::Int)
     end
 end
 
-"""
-    a = truncate_matrix(a, i=1, j=1)
+function makeParsFFT_1D(x, p)
+    N = length(x)
+    dx = x[2] - x[1]
 
-Returns the matrix dropping the last i rows and j columns.
-"""
-function truncate_matrix(a, i=1, j=1)
-    return a[1:end-i, 1:end-j]
+    k_fft = 2pi/dx * fftfreq(N)
+    P_fft = plan_fft(x)
+    P_ifft = plan_ifft(x)
+
+    p_ = Dict{Symbol,Any}()
+    @pack! p_ = k_fft, P_fft, P_ifft
+    return merge(p,p_)
 end
+
+#####################################
+# Adimensional Schrodinger Equation # 
+#####################################
 
 """
     p = make_ε_x(p)
@@ -27,7 +39,7 @@ calculates and saves the parameter ε_x in p
 """
 function make_ε_x(p)
     @unpack m, E_0, L_0, ħ = p   
-    ε_x = ħ^2 / (2*m*L_0^2*E_0)
+    ε_x = sqrt(ħ^2 / (m*L_0^2*E_0))
 
     p_ = Dict{Symbol,Any}()
     @pack! p_ = ε_x 
@@ -47,6 +59,10 @@ function make_ε_t(p)
     @pack! p_ = ε_t 
     return merge(p,p_)
 end
+
+#########################
+# For Circular Billiard #
+#########################
 
 jprime(ν,x) = 0.5*(besselj(ν - 1, x) - besselj(ν + 1, x))
 
@@ -79,4 +95,58 @@ function besseljprime_zeros(ν::Real, N::Int; step = 0.5, atol = 1e-12)
         xL, fL = root, jprime(ν, root + eps())   # move off the root slightly
     end
     return roots
+end
+
+
+###################################
+# For Quantum Harmonic Oscillator #
+###################################
+
+"""
+    ψ = coherent_state_1D(x, t, p)
+    
+Analytical solution for a coherent state of a harmonic oscillator on 1D.
+
+Parameters:
+- x: Spatial grid points
+- t: Scalar Time
+- p: parameter container with entries (adimensional units):
+    - α: Complex coherent state parameter (α = |α|exp(iφ))
+    - π_k: Squared Frequency of the harmonic oscillator
+"""
+function coherent_state_1D(x, t, p)
+    @unpack α, π_k, ε_x, ε_t = p
+    ω = sqrt(π_k)
+
+    # Width parameter
+    σ² = ε_x^2/(ε_t*ω)
+    
+    # Time-dependent parameters
+    x_t = abs(α) * sqrt(2*ε_x^2 /(ε_t * ω)) * cos(angle(α) - ω*t)
+    p_t = abs(α) * sqrt(2*ε_t*ω /ε_x^2) * sin(angle(α) - ω*t)
+    
+    # Phase factor
+    ϕ_t = -ω*t/2
+    
+    # Construct the wavefunction
+    prefactor = (1/(π*σ²))^(1/4)
+    gaussian = exp.(-(x .- x_t).^2 ./ (2σ²))
+    phase = exp.(im .* (p_t .* (x .- x_t/2) .+ ϕ_t))
+    
+    return prefactor .* gaussian .* phase
+end
+
+function make_harmonicPotential_π_k(p)
+    @unpack m, T_0, L_0, k = p   
+    π_k = k/m * T_0^2
+
+    p_ = Dict{Symbol,Any}()
+    @pack! p_ = π_k 
+    return merge(p,p_)
+end
+
+function get_periodHarmonicPotential(p)
+    @unpack π_k = p
+    w_ = sqrt(π_k)
+    return 2pi/w_
 end

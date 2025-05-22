@@ -1,11 +1,47 @@
-function MSV_matrix_1D(x, w, a::PolyBasis{:hermite}, f=nothing)
+##############################
+# Constructors of MSP struct #
+##############################
+
+"""
+    MSP{name, T}
+
+struct with the  mass, stiffness and potential energy matrix
+"""
+struct MSP{name, T}
+    "Mass matrix, Hermitian positve definitive"
+    M 
+    "Stifness matrix, Hermitian"
+    S
+    "Potential matrix, Hermitian"
+    P
+    "domain"
+    Ω
+    "measure"
+    dΩ 
+end
+
+function MSP(name::Symbol, M, S, V, Ω, dΩ)
+    T = eltype(M)
+    if isnothing(V)
+        MSP{name, T}(M, S, nothing, Ω, dΩ)
+    else
+        MSP{name, T}(M, S, V, Ω, dΩ)
+    end
+end
+
+function MSP_matrix_1D(x, w, a::PolyBasis{:hermite}, f=nothing)
     V = a(x);
     n = size(V,2)
-    M = zeros(n,n)
-    S = zeros(n,n)
-    P = zeros(n,n)
-    for i in 0:(n-1)
-        for j in 0:(n-1)
+    # last column and row give bad values so we truncate the matrix
+    M = zeros(n-1,n-1)
+    S = zeros(n-1,n-1)
+    if !isnothing(f)
+        P = zeros(n-1,n-1)
+    else
+        P = nothing
+    end
+    for i in 0:(n-2)
+        for j in 0:(n-2)
             m = dot(w, V[:,i+1] .* V[:,j+1])
 
             s = 1/4*kronecker(j+1,i+1)*dot(w, V[:,i+1].*V[:,i+1])*(i+1) - j/4*kronecker(j-1,i+1)*dot(w, V[:,i+1].*V[:,i+1])*(i+1) - i/4*kronecker(j+1,i-1)*dot(w, V[:,j+1].*V[:,j+1])*(j+1)
@@ -28,19 +64,24 @@ function MSV_matrix_1D(x, w, a::PolyBasis{:hermite}, f=nothing)
             M[i+1,j+1] = m
         end
     end
-    return M, S, P
+    return MSP(:polybasis, M, S, P, x, w)
 end
 
-function MSV_matrix_1D(x, w, a::PolyBasis{:hermite_hat}, f=nothing)
+function MSP_matrix_1D(x, w, a::PolyBasis{:hermite_hat}, f=nothing)
     # no = [1/sqrt(a.f_norm(i,i)) for i in 0:(a.n-1)];
     # V = a(x) .* no';
     V = a(x);
     n = size(V,2)
-    M = zeros(n,n)
-    S = zeros(n,n)
-    P = zeros(n,n)
-    for i in 0:(n-1)
-        for j in 0:(n-1)
+    # last column and row give bad values so we truncate the matrix
+    M = zeros(n-1,n-1)
+    S = zeros(n-1,n-1)
+    if !isnothing(f)
+        P = zeros(n-1,n-1)
+    else
+        P = nothing
+    end
+    for i in 0:(n-2)
+        for j in 0:(n-2)
             m = kronecker(i,j)
 
             s = i/4*kronecker(j-1,i-1) - sqrt(j*(j-1))/4*kronecker(j-1,i+1) - sqrt(i*(i-1))/4*kronecker(j+1,i-1) + (i+1)/4*kronecker(j+1,i+1)
@@ -58,10 +99,10 @@ function MSV_matrix_1D(x, w, a::PolyBasis{:hermite_hat}, f=nothing)
             M[i+1,j+1] = m
         end
     end
-    return M, S, P
+    return MSP(:polybasis, M, S, P, x, w)
 end
 
-function MSV_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Geometry.UnstructuredDiscreteModel, p, f=nothing)
+function MSP_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Geometry.UnstructuredDiscreteModel, p, f=nothing)
     @unpack p_gridap = p
     @unpack order, bc_type = p_gridap
 
@@ -88,8 +129,12 @@ function MSV_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Ge
         P = nothing
     end
 
-    return M, S, P
+    return MSP(:gridap, M, S, P, Ω, dΩ)
 end
+
+########################
+# Billiards boundaries #
+########################
 
 function robnik_billiard(θ, p)
     @unpack R, ε = p
@@ -102,6 +147,10 @@ function elliptic_billiard(θ, p)
     return a*b / sqrt((b*c)^2 + (a*s)^2)
 end
 
+#####################
+# gmsh constructors #
+#####################
+ 
 function make_gmsh_billiard(rho, name, p)
     @unpack p_gmsh, p_bill = p
     @unpack nθ, l_min, l_max = p_gmsh # should be high enough for smooth CAD curve
@@ -157,7 +206,11 @@ function make_gmsh_billiard(rho, name, p)
     return gmsh_file
 end
 
-function initialize_gridap(gmsh_file, p)
+###############################
+# gridap FEspace initializers #
+###############################
+
+function initialize_gridap(gmsh_file, p, TypeData=Float64)
     @unpack p_gridap = p
     @unpack order, bc_type = p_gridap
 
@@ -167,16 +220,40 @@ function initialize_gridap(gmsh_file, p)
     if bc_type == :Dirichlet
         V = TestFESpace(
               model, reffe;
+              vector_type = Vector{TypeData},
               conformity=:H1,
               dirichlet_tags="billiard_wall")      # ψ = 0 on wall
     elseif bc_type == :Neumann
         V = TestFESpace(
               model, reffe;
+              vector_type = Vector{TypeData},
               conformity=:H1)             # keep all DOFs
     else
         println("Bad boundary type ",:bc_type)
         V = nothing
     end
+
+    return model, V
+end
+
+function initialize_gridap_1D(p, TypeData=Float64)
+    @unpack p_gridap = p
+    @unpack L, n_cells, order = p_gridap
+
+    # 1. Create the domain and mesh
+    domain = (-L, L)
+    partition = (n_cells,)
+    model = CartesianDiscreteModel(domain, partition)
+    
+    # 2. Define the FE spaces
+    reffe = ReferenceFE(lagrangian, Float64, order)
+    V = FESpace(
+        model,
+        reffe;
+        vector_type = Vector{TypeData},
+        conformity=:H1,
+        dirichlet_tags="boundary"  # Set Dirichlet BC at the boundaries
+    )
 
     return model, V
 end

@@ -26,12 +26,11 @@ export make_ε_x,
        Hermite,
        Hermite_hat,
        Chebyshev,
-       MSV_matrix_1D,
-       MSV_matrix_2D,
+       MSP_matrix_1D,
+       MSP_matrix_2D,
        elliptic_billiard,
        robnik_billiard,
        make_gmsh_billiard,
        initialize_gridap
-
 
 end
