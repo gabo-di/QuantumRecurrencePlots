@@ -131,7 +131,7 @@ function plot_eigenfunctions(L, V, ψ_coeffs, λ, num_to_plot=4)
     x_plot = range(-L, L, length=n_plot_points)
 
     # Plot the eigenfunctions
-    fig = Figure(resolution=(800,200*num_to_plot))
+    fig = Figure(size=(800,200*num_to_plot))
     
     for i in 1:num_to_plot
         ax = Axis(fig[i,1])

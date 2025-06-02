@@ -103,6 +103,10 @@ function MSP_matrix_1D(x, w, a::PolyBasis{:hermite_hat}, f=nothing)
 end
 
 function MSP_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Geometry.UnstructuredDiscreteModel, p, f=nothing)
+    return _MSP_matrix(V, model, p, f) # for now it is the same as here
+end
+
+function _MSP_matrix(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Geometry.DiscreteModel, p, f=nothing)
     @unpack p_gridap = p
     @unpack order, bc_type = p_gridap
 
@@ -123,13 +127,22 @@ function MSP_matrix_2D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Ge
 
     # take care of potential energy
     if !isnothing(f)
-        p_M(u,v) = ∫( u*f*v )*dΩ        # Potential Energy matrix
-        P = assemble_matrix(p_M, U, V)
+        function p_M(u, v)
+            potential(x) = f(x...)  # convert from Gridap.Point to real number list
+            return ∫(potential*u*v)*dΩ
+        end
+        P = assemble_matrix(p_M, U, V) # potential energy matrix
+        # force symmetry
+        P = (P + P') / 2
     else
         P = nothing
     end
 
     return MSP(:gridap, M, S, P, Ω, dΩ)
+end
+
+function MSP_matrix_1D(V::Gridap.FESpaces.UnconstrainedFESpace, model::Gridap.Geometry.CartesianDiscreteModel, p, f=nothing)
+    _MSP_matrix(V, model, p, f) # for now it is the same as here
 end
 
 ########################

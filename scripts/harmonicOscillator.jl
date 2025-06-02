@@ -1,26 +1,26 @@
-using Revise
 using DrWatson
 @quickactivate "QuantumRecurrencePlots"
 using QuantumRecurrencePlots
 using FFTW
 using CairoMakie
 using LinearAlgebra
+using Arpack
+using Gridap
+using Infiltrator
 
 """
-    solve_harmonic_oscillator(x, k, dt, tmax, ω, ψ_initial)
+    solve_harmonic_oscillator_fft(x, k, dt, tmax, ω, ψ_initial)
     
 Solves the time-dependent Schrödinger equation for a harmonic oscillator
 using the split-step Fourier method.
 
 Parameters:
 - x: Spatial grid
-- k: Momentum grid
-- dt: Time step
-- tmax: Maximum simulation time
-- ω: Frequency of the harmonic oscillator
+- t: Time grid
+- p: parameters for simulation
 - ψ_initial: Initial wavefunction
 """
-function solve_harmonic_oscillator(x, t, p, ψ_initial)
+function solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
     @unpack π_k, ε_x, ε_t = p
     @unpack k_fft, P_fft, P_ifft = p
 
@@ -28,11 +28,15 @@ function solve_harmonic_oscillator(x, t, p, ψ_initial)
     dx = x[2] - x[1]
     nt = length(t)
     
-    # Potential energy (harmonic oscillator)
-    V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2
+    # Potential energy (harmonic oscillator) 
+    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+    V = f.(x) 
+    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2
     
     # Kinetic energy in Fourier space
-    T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
+    T = kin.(k_fft)
+    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
     
     # Define evolution operators
     exp_V = exp.(-im * V * dt/2)
@@ -61,9 +65,33 @@ function solve_harmonic_oscillator(x, t, p, ψ_initial)
     return ψ
 end
 
+function to_plot_femfunctions(L, V, ψ_coeffs, M)
+    # Create a fine grid for plotting
+    n_plot_points = 1000
+    x_plot = range(-L, L, length=n_plot_points)
+
+    
+    # Normalize eigenfunction
+    ψ_i = ψ_coeffs[:]
+    ψ_i = ψ_i / sqrt(abs(ψ_i' * M * ψ_i))  # Normalize with respect to mass matrix
+   
+    # Create FE function
+    ψ_fem = FEFunction(V, ψ_i)
+   
+    # Evaluate at the plotting points
+    T = ComplexF64
+    ψ_values = zeros(T, n_plot_points)
+    for (j, x) in enumerate(x_plot)
+        ψ_values[j] = ψ_fem(Gridap.Point(x))
+    end
+   
+   
+    return x_plot, ψ_values
+end
+
 # Plot the results using Makie
 function plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
-    fig = Figure(resolution=(1200, 800))
+    fig = Figure(size=(1200, 800))
     
     # Real part comparison
     ax1 = Axis(fig[1, 1], 
@@ -104,151 +132,128 @@ function plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
     return fig
 end
 
-
-using Gridap
-using Gridap.FESpaces
-using Gridap.ReferenceFEs
-using LinearAlgebra
-using SparseArrays
-using Plots
-
-"""
-    solve_harmonic_oscillator_fem(L, n_cells, degree, ω)
-    
-Solves the quantum harmonic oscillator using finite element method in Gridap.
-
-Parameters:
-- L: Half-width of the domain [-L,L]
-- n_cells: Number of cells in the mesh
-- degree: Polynomial degree of basis functions
-- ω: Frequency of the harmonic oscillator
-"""
-function solve_harmonic_oscillator_fem(L=10.0, n_cells=200, degree=3, ω=1.0)
-    # 1. Create the domain and mesh
-    domain = (-L, L)
-    partition = (n_cells,)
-    model = CartesianDiscreteModel(domain, partition)
-    
-    # 2. Define the FE spaces
-    reffe = ReferenceFE(lagrangian, Float64, degree)
-    V = FESpace(
-        model,
-        reffe;
-        conformity=:H1,
-        dirichlet_tags="boundary"  # Set Dirichlet BC at the boundaries
-    )
-    
-    # Get test and trial spaces
-    U = TrialFESpace(V, 0.0)  # u = 0 at boundaries
-    
-    # 3. Define quadrature rule
-    Ω = Triangulation(model)
-    degree_quad = 2*degree  # Higher for accuracy
-    dΩ = Measure(Ω, degree_quad)
-    
-    # 4. Define bilinear forms
-    # Mass matrix: ∫ u⋅v dΩ
-    a_M(u, v) = ∫(u*v)*dΩ
-    
-    # Stiffness matrix (kinetic energy): (1/2)∫ ∇u⋅∇v dΩ
-    a_S(u, v) = ∫(0.5*∇(u)⋅∇(v))*dΩ
-    
-    # Potential energy matrix: (1/2)ω²∫ x²⋅u⋅v dΩ
-    function a_V(u, v)
-        potential(x) = 0.5*ω^2*x[1]^2  # Harmonic potential V(x) = (1/2)ω²x²
-        return ∫(potential∘get_physical_coordinate(Ω)*u*v)*dΩ
-    end
-    
-    # 5. Assemble matrices
-    M = assemble_matrix(a_M, U, V)
-    S = assemble_matrix(a_S, U, V)
-    V_mat = assemble_matrix(a_V, U, V)
-    
-    # 6. Construct the Hamiltonian matrix: H = S + V
-    H = S + V_mat
-    
-    # Convert to sparse matrices for eigenvalue solvers
-    M_sparse = sparse(M)
-    H_sparse = sparse(H)
-    
-    # Return domain information, spaces, and matrices
-    return model, V, U, M_sparse, S_sparse, V_mat, H_sparse
-end
-
-# Solve the system
-L = 10.0  # Domain half-width
-n_cells = 300  # Number of cells
-degree = 4  # Polynomial degree (higher = more accurate)
-ω = 1.0  # Harmonic oscillator frequency
-
-model, V, U, M, S, V_mat, H = solve_harmonic_oscillator_fem(L, n_cells, degree, ω)
-
-# Solve the eigenvalue problem using Arpack
-using Arpack
-
-println("Solving eigenvalue problem...")
-λ, ψ_coeffs = eigs(H, M; nev=10, which=:SM, sigma=0.0, maxiter=1000)
-println("Eigenvalues: ", real.(λ))
-
-# Expected eigenvalues for harmonic oscillator: Eₙ = ω(n + 1/2), n = 0,1,2,...
-expected = ω * (0:9 .+ 0.5)
-println("Expected eigenvalues: ", expected)
-println("Relative errors: ", abs.(λ .- expected) ./ expected)
-
-# Plot eigenfunctions
-function plot_eigenfunctions(model, V, ψ_coeffs, λ, num_to_plot=4)
-    # Create FE function for visualization
-    uh_fem = FEFunction(V, ψ_coeffs)
-    
-    # Extract x-coordinates and function values
-    coords = get_node_coordinates(get_fe_dof_basis(V))
-    x_coords = [p[1] for p in coords]
-    
-    # Sort coordinates and get sorting indices
-    sorted_indices = sortperm(x_coords)
-    x_sorted = x_coords[sorted_indices]
-    
-    # Plot the eigenfunctions
-    p = plot(layout=(num_to_plot, 1), size=(800, 200*num_to_plot))
-    
-    for i in 1:num_to_plot
-        # Normalize eigenfunction
-        ψ_i = ψ_coeffs[:, i]
-        ψ_i = ψ_i / sqrt(ψ_i' * M * ψ_i)
-        
-        # Create FE function
-        ψ_fem = FEFunction(V, ψ_i)
-        
-        # Evaluate at the sorted coordinates
-        ψ_values = [ψ_fem(Point(x)) for x in x_sorted]
-        
-        # Plot with appropriate title
-        plot!(p[i], x_sorted, ψ_values, 
-              title="n=$(i-1), E=$(round(real(λ[i]), digits=3))", 
-              label="", legend=false, 
-              xlabel=i==num_to_plot ? "Position x" : "", 
-              ylabel="ψ$(i-1)(x)")
-    end
-    
-    return p
-end
-
-# Plot the first few eigenfunctions
-p = plot_eigenfunctions(model, V, ψ_coeffs, λ, 6)
-display(p)
-
 function main()
-    # Set up simulation parameters
+    # Solve the system
     p = (
-        N = 2048,      # Number of grid points (higher for better accuracy)
-        nt = 1000,     # number of time steps 
-        τ = 0.22121,    # τ times period of oscillation is the final time
-        # the following parameters have units
-        L_0 = 10.0,    # Length scale
-        E_0 = 1.0,     # Energy scale
+        L_0 = 1.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
         T_0 = 1.0,     # Time scale
         ħ = 1.0,       # hbar
-        m = 1.0,       # mass of particle
+        m = 2.0,       # mass of particle
+        k = 1.0,        # harmonic potential mω^2
+        nt = 10000,     # number of time steps 
+        τ = 4.22121,    # τ times period of oscillation is the final time
+    );
+    #
+    # prepare the adimensional parameters, not all scales are independent
+    p = make_ε_x(p);
+    p = make_ε_t(p);
+    p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p);
+
+
+    # now consider all adimensional variables
+     
+    # Coherent state parameter
+    α = 1.0 + 0.0*im; # small so it is in energy range
+    p = merge(p, Dict(:α => α));
+    x_max = sqrt(2*p.ε_x^2 / p.ε_t) * abs(p.α);
+
+    # prepare grid 
+    L = 2*4*x_max;  # x_max gives the size scale, L must be greater than this  
+
+    p_gridap = (
+        L = L,
+        n_cells = 300,  # Number of cells
+        order = 4,  # Polynomial degree (higher = more accurate)
+        bc_type = :Dirichlet
+    );
+
+    
+    p = merge(p, (p_gridap = p_gridap,));
+
+    model, V = initialize_gridap_1D(p, ComplexF64);
+
+    # preapare the matrices
+    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p);
+    msp = MSP_matrix_1D(V, model, p, f);
+
+    tmax = p.τ*QuantumRecurrencePlots.get_periodHarmonicPotential(p); # Evolve for one full period
+    t0 = 0.0 # initial time
+    t = LinRange(t0, tmax, p.nt);
+    ψ_initial(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], t0, p);
+    ψ_0 = get_free_dof_values(interpolate(ψ_initial, V))
+
+    x, ψ_numerical = to_plot_femfunctions(L, V, solve_harmonic_oscillator_MSP(msp, V, t, p, ψ_0), msp.M)
+
+    # Compute analytical solution at final time
+    ψ_analytical(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], tmax, p)
+    x, ψ_f = to_plot_femfunctions(L, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
+
+
+    # Generate and save the plot
+    fig = plot_comparison(x, tmax, ψ_numerical, ψ_f)
+
+    # Display the figure if running interactively
+    display(fig)
+
+    # Eigen system
+    # begin
+    #     @unpack M, S, P = msp 
+    #     H = P + S * 1/2 * p.ε_x ^ 2 /p.ε_t # we reescale the stiffnes matrix with the adimensional parameters 
+    #
+    #
+    #     # Solve the eigenvalue problem using Arpack
+    #
+    #     println("Solving eigenvalue problem...")
+    #     λ, ψ_coeffs = eigs(H, M; nev=10, which=:LR, sigma=1e-6, tol=1e-5, maxiter=1000)
+    #     # λ, ψ_coeffs = eigs(H, M; nev=10, which=:SM, tol=1e-5, maxiter=1000)
+    #     println("Eigenvalues: ", real.(λ))
+    #
+    #     # Expected eigenvalues for harmonic oscillator: Eₙ = ω(n + 1/2), n = 0,1,2,...
+    #     expected = p.π_k * (collect(0:9) .+ 0.5)
+    #     println("Expected eigenvalues: ", expected)
+    #     println("Relative errors: ", abs.(λ .- expected) ./ expected)
+    #     
+    #     # Plot the first few eigenfunctions
+    #     p = plot_femfunctions(L, V, ψ_coeffs[:,2], msp.M)
+    #     display(p)
+    # end
+end
+
+
+function solve_harmonic_oscillator_MSP(msp::MSP, V, t, p, ψ_initial)
+    @unpack M, S, P = msp
+    @unpack π_k, ε_x, ε_t = p
+
+    dt = t[2] - t[1]
+    nt = length(t)
+    H = P + S * 1/2 * p.ε_x ^ 2 /p.ε_t # we reescale the stiffnes matrix with the adimensional parameters 
+
+    # precompute matrices for Crank-Nicolson
+    A = factorize(M + im*dt/2*H)
+    B = (M - im*dt/2*H)
+
+    ψ_fem = copy(ψ_initial)
+
+    for i in 1:(nt-1)
+        ψ_fem = A \ (B * ψ_fem)
+    end
+    return ψ_fem
+end
+
+
+function main_()
+    # Set up simulation parameters
+    p = (
+        N = 2048*2,      # Number of grid points (higher for better accuracy)
+        nt = 10000,     # number of time steps 
+        τ = 4.22121,    # τ times period of oscillation is the final time
+        # the following parameters have units
+        L_0 = 1.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
+        T_0 = 1.0,     # Time scale
+        ħ = 1.0,       # hbar
+        m = 2.0,       # mass of particle
         k = 1.0        # harmonic potential mω^2
     )
 
@@ -260,7 +265,7 @@ function main()
     # now consider all adimensional variables
      
     # Coherent state parameter
-    α = 2.0 + 1.0*im # small so it is in energy range
+    α = 1.0 + 0.0*im # small so it is in energy range
     p = merge(p, Dict(:α => α))
     x_max = sqrt(2*p.ε_x^2 / p.ε_t) * abs(p.α)
 
@@ -281,7 +286,7 @@ function main()
     ψ_initial = QuantumRecurrencePlots.coherent_state_1D(x, t0, p)
 
     # Solve using split-step Fourier method
-    ψ_numerical = solve_harmonic_oscillator(x, t, p, ψ_initial)
+    ψ_numerical = solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
 
     # Compute analytical solution at final time
     ψ_analytical = QuantumRecurrencePlots.coherent_state_1D(x, tmax, p)
@@ -293,5 +298,3 @@ function main()
     # Display the figure if running interactively
     display(fig)
 end
-
-main()

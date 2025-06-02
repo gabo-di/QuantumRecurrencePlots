@@ -31,6 +31,8 @@ export make_ε_x,
        elliptic_billiard,
        robnik_billiard,
        make_gmsh_billiard,
-       initialize_gridap
+       initialize_gridap,
+       initialize_gridap_1D,
+       MSP
 
 end

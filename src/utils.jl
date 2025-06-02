@@ -150,3 +150,13 @@ function get_periodHarmonicPotential(p)
     w_ = sqrt(π_k)
     return 2pi/w_
 end
+
+function harmonicPotential(x, p)
+    @unpack π_k, ε_x, ε_t = p
+    return 1/2 * π_k * ε_t / ε_x ^ 2 * x^2
+end
+
+function kineticEnergy(k_fft, p)
+    @unpack ε_x, ε_t = p
+    return 1/2 * ε_x ^ 2 /ε_t * k_fft^2
+end
