@@ -1,4 +1,5 @@
 # bohmian trajectory
+# Incomplete
 θ = π
 mode_0_re = FEFunction(V, real(ψ_coeffs[:,1]))
 mode_0_im = FEFunction(V, imag(ψ_coeffs[:,1]))

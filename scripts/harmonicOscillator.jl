@@ -8,62 +8,10 @@ using Arpack
 using Gridap
 using Infiltrator
 
-"""
-    solve_harmonic_oscillator_fft(x, k, dt, tmax, ω, ψ_initial)
-    
-Solves the time-dependent Schrödinger equation for a harmonic oscillator
-using the split-step Fourier method.
 
-Parameters:
-- x: Spatial grid
-- t: Time grid
-- p: parameters for simulation
-- ψ_initial: Initial wavefunction
-"""
-function solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
-    @unpack π_k, ε_x, ε_t = p
-    @unpack k_fft, P_fft, P_ifft = p
-
-    dt = t[2] - t[1]
-    dx = x[2] - x[1]
-    nt = length(t)
-    
-    # Potential energy (harmonic oscillator) 
-    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    V = f.(x) 
-    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2
-    
-    # Kinetic energy in Fourier space
-    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
-    T = kin.(k_fft)
-    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
-    
-    # Define evolution operators
-    exp_V = exp.(-im * V * dt/2)
-    exp_T = exp.(-im * T * dt)
-    
-    # Initialize wavefunction
-    ψ = copy(ψ_initial)
-    
-    # Normalize
-    ψ = ψ ./ sqrt(sum(abs2.(ψ)) * dx)
-
-    # Time evolution using split-step Fourier method
-    for i in 1:(nt-1)
-        # Apply half-step of potential
-        ψ = ψ .* exp_V
-        
-        # Apply full step of kinetic energy in Fourier space
-        ψ_k = P_fft * ψ
-        ψ_k = ψ_k .* exp_T
-        ψ = P_ifft *ψ_k
-        
-        # Apply second half-step of potential
-        ψ = ψ .* exp_V
-    end
-    
-    return ψ
-end
+#########
+# utils #
+#########
 
 function to_plot_femfunctions(L, V, ψ_coeffs, M)
     # Create a fine grid for plotting
@@ -130,6 +78,59 @@ function plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
           fontsize=20)
     
     return fig
+end
+
+
+######################################
+# coherent state harmonic oscillator #
+######################################
+
+"""
+harmonic oscillator using split fourier
+"""
+function solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
+    @unpack π_k, ε_x, ε_t = p
+    @unpack k_fft, P_fft, P_ifft = p
+
+    dt = t[2] - t[1]
+    dx = x[2] - x[1]
+    nt = length(t)
+    
+    # Potential energy (harmonic oscillator) 
+    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+    V = f.(x) 
+    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2
+    
+    # Kinetic energy in Fourier space
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
+    T = kin.(k_fft)
+    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
+    
+    # Define evolution operators
+    exp_V = exp.(-im * V * dt/2)
+    exp_T = exp.(-im * T * dt)
+    
+    # Initialize wavefunction
+    ψ = copy(ψ_initial)
+    
+    # Normalize
+    ψ = ψ ./ sqrt(sum(abs2.(ψ)) * dx)
+
+    # Time evolution using split-step Fourier method
+    for i in 1:(nt-1)
+        # Apply half-step of potential
+        ψ = ψ .* exp_V
+        
+        # Apply full step of kinetic energy in Fourier space
+        ψ_k = P_fft * ψ
+        ψ_k = ψ_k .* exp_T
+        ψ = P_ifft *ψ_k
+        
+        # Apply second half-step of potential
+        ψ = ψ .* exp_V
+    end
+    
+    return ψ
 end
 
 function main()
@@ -221,6 +222,9 @@ function main()
 end
 
 
+"""
+harmonic oscillator using Crank-Nicolson and FEM
+"""
 function solve_harmonic_oscillator_MSP(msp::MSP, V, t, p, ψ_initial)
     @unpack M, S, P = msp
     @unpack π_k, ε_x, ε_t = p
@@ -240,7 +244,6 @@ function solve_harmonic_oscillator_MSP(msp::MSP, V, t, p, ψ_initial)
     end
     return ψ_fem
 end
-
 
 function main_()
     # Set up simulation parameters
@@ -298,3 +301,5 @@ function main_()
     # Display the figure if running interactively
     display(fig)
 end
+
+
