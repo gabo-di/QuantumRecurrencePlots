@@ -160,3 +160,41 @@ function kineticEnergy(k_fft, p)
     @unpack ε_x, ε_t = p
     return 1/2 * ε_x ^ 2 /ε_t * k_fft^2
 end
+
+#############################
+# For Quantum Free Particle #
+#############################
+
+function gaussian_state_1D(x, t, p)
+    @unpack x_0, v_0, π_σ², ε_x, ε_t = p
+
+    # Width parameter
+    σ² = ε_x^2/(ε_t)
+    
+    # Time-dependent parameters
+    x_t = x_0 + v_0*t
+    
+    # Phase factor
+    ϕ_t = v_0^2*t/(2*σ²)
+    
+    # Construct the wavefunction
+    prefactor = (1/(2π*σ²/π_σ²*(1 + im*t*π_σ²/2 )^2))^(1/4)
+    gaussian = exp.(-(x .- x_t).^2 ./ (4σ²/π_σ² * (1 + im*t*π_σ²/2 ) ))
+    phase = exp.(im .* (v_0 .* (x .- x_t)/σ² .+ ϕ_t))
+    
+    return prefactor .* gaussian .* phase
+end
+
+function make_freeParticle_pars(p)
+    @unpack σ²_x, ε_x, ε_t = p
+    x_0 = 0
+
+    # Width parameter
+    σ² = ε_x^2/(ε_t)
+
+    π_σ² = σ² / σ²_x
+
+    p_ = Dict{Symbol,Any}()
+    @pack! p_ = π_σ², x_0 
+    return merge(p,p_)
+end
