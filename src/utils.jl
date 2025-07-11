@@ -172,7 +172,7 @@ function gaussian_state_1D(x, t, p)
     σ² = ε_x^2/(ε_t)
     
     # Time-dependent parameters
-    x_t = x_0 + v_0*t
+    x_t = v_0*t
     
     # Phase factor
     ϕ_t = v_0^2*t/(2*σ²)
@@ -187,7 +187,6 @@ end
 
 function make_freeParticle_pars(p)
     @unpack σ²_x, ε_x, ε_t = p
-    x_0 = 0
 
     # Width parameter
     σ² = ε_x^2/(ε_t)
@@ -195,6 +194,6 @@ function make_freeParticle_pars(p)
     π_σ² = σ² / σ²_x
 
     p_ = Dict{Symbol,Any}()
-    @pack! p_ = π_σ², x_0 
+    @pack! p_ = π_σ² 
     return merge(p,p_)
 end

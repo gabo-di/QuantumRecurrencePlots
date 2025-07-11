@@ -4,6 +4,7 @@ using QuantumRecurrencePlots
 using CairoMakie
 using LinearAlgebra
 using Infiltrator
+using OrdinaryDiffEq 
 
 
 #########
@@ -14,6 +15,45 @@ function plot_mean_observables(ψ_analytical)
     return nothing
 end
 
+function plot_velocites(sol, nt, p)
+    @unpack N, τ = p
+    u = sol(τ)
+    x = view(u, 1:N)
+    y = view(u, N+1:2*N)
+    v_x = view(u, 2*N+1:3*N)
+    v_y = view(u, 3*N+1:4*N)
+
+    fig = Figure(size=(1200, 800))
+
+    ax1 = Axis(fig[1, 1], 
+        title="Velocity Real Part", 
+        xlabel="Position x", 
+        ylabel="Position y")
+    heatmap!(ax1, x, y, v_x)
+    
+    ax2 = Axis(fig[1, 2], 
+        title="Velocity Imaginary Part", 
+        xlabel="Position x", 
+        ylabel="Position y")
+    heatmap!(ax2, x, y, v_y)
+
+    ax3 = Axis(fig[2, 1], 
+        title="Position Evolution", 
+        xlabel="Position x", 
+        ylabel="Position y")
+    ax4 = Axis(fig[2, 2], 
+        title="Velocity Evolution", 
+        xlabel="Velocity x", 
+        ylabel="Velocity y")
+    U = sol(range(0, τ, nt))
+    for i in 1:N
+        lines!(ax3, U[0*N+i,:], U[i+1*N,:])    
+        lines!(ax4, U[2*N+i,:], U[i+3*N,:])    
+    end
+
+    
+    return fig
+end
 
 function plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
     fig = Figure(size=(1200, 800))
@@ -73,7 +113,6 @@ function main()
         m = 2.0,       # mass of particle
         v_0 = 1.0,      # velocity of particle (does not have units)
         σ²_x = 1.0,     # width of initial distribution (does not have units)
-        nt = 10,     # number of time steps 
         N = 2048*2,      # Number of grid points (higher for better accuracy)
         τ = 2.22121,    # τ is the final time
     );
@@ -123,4 +162,70 @@ function main()
     display(fig)
 end
 
+"""
+free particle using ensemble evolution
+"""
+function main_1()
+    p = (
+        L_0 = 1.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
+        T_0 = 1.0,     # Time scale
+        ħ = 1.0,       # hbar
+        m = 2.0,       # mass of particle
+        v_0 = 0.0,      # velocity of particle (does not have units)
+        σ²_x = 1.0,     # width of initial distribution (does not have units)
+        τ = 0.01,    # τ is the final time
+        N = 100,       # number of particles on the ensemble
+        σ²_s = 1.0    # width of nonlocal distribution (does not have units)
+    );
+
+    # prepare the adimensional parameters, not all scales are independent
+    p = make_ε_x(p);
+    p = make_ε_t(p);
+    p = QuantumRecurrencePlots.make_freeParticle_pars(p);
+
+    # now consider all adimensional parameters
+
+    # initial positions and velocities in Complex plane
+    # initial state is gaussian state here
+    σ² = p.ε_x^2/p.ε_t
+    σ_0 = sqrt( σ²/p.π_σ²)
+    x0_ = randn(p.N)*σ_0
+    y0_ = zeros(p.N) + (rand(p.N) .- 0.5) .* 0.0
+    v0_x = p.v_0 .- y0_/2 * p.π_σ²
+    v0_y = x0_/2 * p.π_σ²
+
+    u0 = vcat(x0_, y0_, v0_x, v0_y) 
+    tspan = (0.0, p.τ)
+    prob = ODEProblem(free_particle!, u0, tspan, p)
+    sol = solve(prob, Tsit5())
+
+    fig = plot_velocites(sol, 10, p)
+
+    display(fig)
+end
+
+function free_particle!(du, u, p, t)
+    @unpack N, ε_x, ε_t, σ²_s = p
+    σ² = ε_x^2 / ε_t
+
+    x = view(u, 1:N)
+    dx = view(du, 1:N)
+    y = view(u, N+1:2*N)
+    dy = view(du, N+1:2*N)
+    v_x = view(u, 2*N+1:3*N)
+    dv_x = view(du, 2*N+1:3*N)
+    v_y = view(u, 3*N+1:4*N)
+    dv_y = view(du, 3*N+1:4*N)
+
+
+
+    # position
+    dx .= v_x
+    dy .= v_y
+
+    # velocity
+    dv_x .= 0 #(x - x.^3 + 3*y.^2 .* x )
+    dv_y .= 0 #(y + y.^3 - 3*x.^2 .* y)
+end
 
