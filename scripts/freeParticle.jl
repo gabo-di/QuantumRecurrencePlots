@@ -5,6 +5,8 @@ using CairoMakie
 using LinearAlgebra
 using Infiltrator
 using OrdinaryDiffEq 
+using BaryRational
+using FastGaussQuadrature
 
 
 #########
@@ -112,6 +114,7 @@ function main()
         ħ = 1.0,       # hbar
         m = 2.0,       # mass of particle
         v_0 = 1.0,      # velocity of particle (does not have units)
+        x_0 = 0.0,      # particles initial position (does not have units)
         σ²_x = 1.0,     # width of initial distribution (does not have units)
         N = 2048*2,      # Number of grid points (higher for better accuracy)
         τ = 2.22121,    # τ is the final time
@@ -174,9 +177,10 @@ function main_1()
         m = 2.0,       # mass of particle
         v_0 = 0.0,      # velocity of particle (does not have units)
         σ²_x = 1.0,     # width of initial distribution (does not have units)
-        τ = 0.01,    # τ is the final time
+        τ = 1.0,    # τ is the final time
         N = 100,       # number of particles on the ensemble
-        σ²_s = 1.0    # width of nonlocal distribution (does not have units)
+        σ²_s = 1.0,    # width of nonlocal distribution (does not have units)
+        N_ = 5         # number of weight points for FastGaussQuadrature
     );
 
     # prepare the adimensional parameters, not all scales are independent
@@ -195,18 +199,53 @@ function main_1()
     v0_x = p.v_0 .- y0_/2 * p.π_σ²
     v0_y = x0_/2 * p.π_σ²
 
+    # prepare the full list of parameters for schrodinger evolution
+    p_ = schrodinger_aaa_params1d(complex.(x0_, y0_), complex.(v0_x, v0_y), p)
+    
     u0 = vcat(x0_, y0_, v0_x, v0_y) 
     tspan = (0.0, p.τ)
-    prob = ODEProblem(free_particle!, u0, tspan, p)
+
+    prob = ODEProblem(free_particle!, u0, tspan, p_)
     sol = solve(prob, Tsit5())
 
     fig = plot_velocites(sol, 10, p)
 
     display(fig)
+    return sol, p_
+end
+
+function preapare_gaussweights(p)
+    @unpack N_ = p
+    x, w = gausshermite(N_, normalize = true)
+    return x, w
+end
+
+mutable struct SchrodingerAAAParams1D{T,W}
+    fm       :: BaryRational.MovingAAAapprox{W,W}      # warm AAA cache
+    s_nodes  :: Vector{T}        # quadrature nodes for ρ(s)  (real or complex)
+    w_nodes  :: Vector{T}        # matching weights
+    tmp      :: Vector{W}        # scratch length N (accumulator)
+    p        :: NamedTuple       # the fixed parameters
+end
+
+function schrodinger_aaa_params1d(z::Vector{W}, v::Vector{W}, p) where{W}
+    # initialize aaa algorithm
+    fm = movingAAAapprox(z,v; clean=true)
+    
+    # gaussian weights
+    x, w = preapare_gaussweights(p)
+    T = typeof(real(z[1]))
+    x = T.(x)
+    w = T.(w)
+
+    # cache vector with integral of \rho(s) v(z-s)
+    tmp = zeros(W, p.N)
+
+    return SchrodingerAAAParams1D{T,W}(fm, x, w, tmp, p)
 end
 
 function free_particle!(du, u, p, t)
-    @unpack N, ε_x, ε_t, σ²_s = p
+    @unpack N, ε_x, ε_t, σ²_s = p.p
     σ² = ε_x^2 / ε_t
 
     x = view(u, 1:N)
@@ -218,14 +257,22 @@ function free_particle!(du, u, p, t)
     v_y = view(u, 3*N+1:4*N)
     dv_y = view(du, 3*N+1:4*N)
 
-
+    # update the moving part
+    Z = complex.(x,y)
+    F = complex.(v_x, v_y)
+    r = update_movingaaa!(p.fm, Z, F)
+    if !isnothing(r)
+        p.fm = r
+    end
+    for i in 1:N
+        p.tmp[i] = im * σ²/σ²_s * (dot(p.w_nodes, p.fm(Z[i] .- p.s_nodes * σ²_s))  - F[i]*sum(p.w_nodes) )
+    end
 
     # position
     dx .= v_x
     dy .= v_y
 
     # velocity
-    dv_x .= 0 #(x - x.^3 + 3*y.^2 .* x )
-    dv_y .= 0 #(y + y.^3 - 3*x.^2 .* y)
+    dv_x .= real.(p.tmp) #+ (x - x.^3 + 3*y.^2 .* x )
+    dv_y .= imag.(p.tmp) #+ (y + y.^3 - 3*x.^2 .* y)
 end
-
