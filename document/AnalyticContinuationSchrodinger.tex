@@ -1,0 +1,428 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{url}
+\usepackage{amsmath,amssymb,amsfonts,bm}
+\usepackage{physics,geometry,hyperref,enumitem}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+
+\usepackage[
+backend=bibtex,
+style=alphabetic,
+sorting=ynt
+]{biblatex}
+\addbibresource{bibliography.bib}
+
+
+\begin{document}
+
+\title{On the Analytic Continuation of Schr\"odinger Equation}
+\date{\today}
+\maketitle
+
+\begin{abstract}
+	In resent papers \cite{yordanov2024complex} \cite{yang2021extending} the wave function
+	was analytically extended to the positions complex plane, arguing that Quantum Mechanics can be understood as a
+	Complex Stochastic Optimal Control. In this work we study the analytical continuation of the Schr\"odinger Equation to the 
+	complex plane in position and time, how to perform numerical simulations, and the meaning of the results.
+\end{abstract}
+
+%%%%%
+% Dimensionless Schr
+
+\section{Dimensionless Schr\"odinger Equation}
+
+~~~~We write the Schr\"odinger Equation in dimensionless variables so we can understand better have a better numerical scheme.
+
+First we choose some scales for our system:
+
+\begin{itemize}
+\item Length scale $L_0$.
+\item Time scale $T_0$.
+\item Mass scale $M_0$.
+\item Temperature scale $\Theta_0$
+\end{itemize}
+
+and a reference energy $E_0$. Then we define the following dimensionless parameters:
+
+\begin{equation}\label{eps_t}
+\varepsilon_t = \frac{\hbar}{T_0 E_0 }
+\end{equation}
+
+\begin{equation}\label{eps_x}
+\varepsilon_x^2 = \frac{\hbar^2}{L_0^2 E_0 M_0}
+\end{equation}
+
+\begin{equation}\label{eps_theta}
+\varepsilon_{\Theta} = \frac{E_0}{k_B \Theta_0}
+\end{equation}
+
+The Schr\"odinger Equation on position basis for single particle is
+
+\begin{equation}\label{schr_dim}
+i \hbar \frac{\partial \psi}{\partial t} = - \frac{\hbar^2}{2m}\nabla^2 \psi - V \psi
+\end{equation}
+
+in dimensionless \footnote{Note that the wave function on position space also has units of $L_0^{-d/2}$, such that $\int dx^d |\psi|^2 = 1$ is dimensionless.} variables this is:
+
+\begin{equation}\label{schr}
+i  \frac{\partial \psi}{\partial t} = - \frac{\varepsilon_x^2}{2 \varepsilon_t} \nabla^2 \psi - \frac{V}{\varepsilon_t} \psi
+\end{equation}
+
+Where we have chosen the mass scale $M_0$ the be the mass of the single particle.
+
+The polar decomposition of the wave function
+
+\begin{equation}\label{psi_polar}
+\psi = \sqrt{\rho} e^{iS}
+\end{equation}
+
+
+%%%
+% continuity and HJ eq
+
+can be used on the Schr\"odinger Equation \ref{schr}, from which the imaginary part gives a continuity equation:
+
+\begin{equation}\label{cont_schr}
+\partial_t \rho + \frac{\varepsilon_x^2}{\varepsilon_t} \partial_l \left( \rho \partial^l S \right) = 0
+\end{equation}
+
+where the velocity field is given by 
+
+\begin{equation}\label{real_vel_field}
+v^l = \frac{\varepsilon_x^2}{\varepsilon_t} \partial^l S
+\end{equation}
+
+The real part of the polar decomposition of \ref{schr} gives a Hamilton-Jacobi equation:
+
+\begin{equation}\label{hj_schr}
+\partial_t S =   -\frac{\varepsilon_x^2}{2 \varepsilon_t} ( \partial_l S \partial^l S) - \frac{V}{\varepsilon_t} + \frac{\varepsilon_x^2}{2 \varepsilon_t} \frac{\partial_l \partial^l \sqrt{\rho}}{\sqrt{\rho}}
+\end{equation}
+
+where the last term is the denominated Quantum potential
+
+As in Classical mechanics we can take the gradient  of \ref{hj_schr} to obtain the time derivative of the velocity field \ref{real_vel_field}
+
+\begin{equation}\label{grad_hj_schr}
+\partial_t \left( \frac{\varepsilon_x^2}{ \varepsilon_t}\partial^k S  \right) + \frac{\varepsilon_x^2}{ \varepsilon_t} ( \partial^l S) ( \partial_l \frac{\varepsilon_x^2}{ \varepsilon_t} \partial^k S)  = -  \frac{\varepsilon_x^2}{ \varepsilon_t} \partial^k \left( \frac{V}{\varepsilon_t} - \frac{\varepsilon_x^2}{2 \varepsilon_t} \frac{\partial_l \partial^l \sqrt{\rho}}{\sqrt{\rho}} \right)
+\end{equation}
+
+where we can use the material derivative $\frac{d}{dt} = \frac{\partial}{\partial t} + \frac{ \partial x^l}{\partial t } \frac{ \partial}{\partial x^l} $ and write the Newtonian equation:
+
+\begin{equation}\label{newton}
+\frac{dv^k}{dt} =  -  \frac{\varepsilon_x^2}{ \varepsilon_t} \partial^kU
+\end{equation}
+
+From a numerical point of view Shcr\"odinger Equation \ref{schr} is easier to solve than the polar form \ref{cont_schr} and \ref{hj_schr}. In Classical Mechanics the Quantum potential does not exist, then it is easier to solve Newton equation \ref{newton} for an ensemble of positions and use a Monte Carlo simulation to evaluate mean values: 
+
+\begin{equation}\label{mc_integral}
+\int dx O \rho = \frac{1}{n} \sum_{i=1}^{n} O_i  
+\end{equation}
+
+where $O_i$ is the observable evaluated on each element of the ensemble of $n$ positions.
+
+
+%%%
+% log schr
+
+\section{Grad-Log-Schr\"odinger Equation}
+
+~~~~Consider 
+
+\begin{equation}\label{log_psi}
+\gamma = \log(\psi)
+\end{equation}
+
+and use the effective inverse mass parameter
+
+\begin{equation}\label{sigmass}
+\sigma_m^2 = \frac{\varepsilon_x^2}{\varepsilon_t} 
+\end{equation}
+
+then Schr\"odinger Equation \ref{schr} becomes
+
+\begin{equation}\label{log_schr}
+i \partial_t \gamma = - \frac{\sigma_m^2}{2} (\partial_l \partial^l \gamma + \partial_l \gamma \partial^l \gamma) + \frac{V}{\varepsilon_t}
+\end{equation}
+
+we call this the Log-Schr\"odinger Equation. Taking the gradient of last equation we obtain
+
+
+%%%
+% grad log schr
+
+\begin{equation}\label{grad_log_schr}
+\partial_t \left( \partial^k (-i \sigma_m^2  \gamma)  \right) + \partial^l (-i \sigma_m^2 \gamma )  \partial_l(  \partial^k (-i \sigma_m^2 \gamma) )  = -  \sigma_m^2 \partial^k \left( \frac{V}{\varepsilon_t} - \frac{i}{2} \partial_l \partial^l (-i \sigma_m^2 \gamma) \right)
+\end{equation}
+
+we call this the Grad-Log-Schr\"odinger Equation. Using $ \eta^k = -i \sigma_m^2  \partial^k\gamma $ we obtain  a Newtonian like equation
+
+\begin{equation}\label{newton_complex}
+\frac{d \eta^k}{dt} = -  \frac{\sigma_m^2}{ \varepsilon_t} \partial^k  V + \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta^k
+\end{equation}
+
+but we have to assume a complex velocity 
+
+\begin{equation}\label{velocity_complex}
+ \frac{\partial z^k}{\partial t} = \eta^k
+\end{equation}
+
+and the analytical continuation of the potential $V$ \cite{yordanov2024complex}. 
+
+The Newtonian Grad Log Shcr\"odinger equation tells how an ensemble of identical particles moves on the complex plane, where 
+the interaction between the particles comes from the velocitypotential $ \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta^k$. It is clear
+that we recover classical mechanics on the complex plane if this interaction is zero, on other cases this is analogous to Bohm's
+quantum potential, with the difference that is linear, and does not depend on estimating the density of the particles, but directly uses
+the velocity. Before discussing more about this equation, let's study the Log-Schr\"odinger Equation \ref{log_schr}.
+
+
+
+%%%
+% log schr free particle
+
+\section{Applications}
+
+\subsection{Log-Schr\"odinger Equation on free particle}
+
+~~~~For the free particle we have $V=0$. Let us study the dispersion of a Gaussian wave packet, we begin with the ansatz
+
+\begin{equation}
+\gamma = -x^2 f_2(t) - f_0(t)
+\end{equation}
+
+using last equation on \ref{log_schr} we get:
+
+\begin{eqnarray}
+i \left( -x^2 \dot f_2 - \dot f_0 \right) &=& - \frac{\sigma_m^2}{2} \left( -2 f_2 + 4 x^2 f_2^2 \right)  \nonumber \\
+\dot f_2 & = & - 2 i \sigma_m^2 f_2^2 \\
+\dot f_0 & = &   i \sigma_m^2 f_2
+\end{eqnarray}
+
+that gives the known solutions
+
+\begin{eqnarray}\label{log_free_particle}
+f_2(t) & = & \frac{f_2}{1 + 2i \sigma_m^2 f_2 t}  \\
+f_0(t) & = & f_0 + \frac{1}{2} \log \left( 1 + 2i \sigma_m^2 f_2 t \right) \\
+\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2 f_2}{ 
+1 + 2i \sigma_m^2 f_2 t} } 
+\end{eqnarray}
+
+where we used $ f_0  = - \frac{1}{4} \log \left( \frac{4 f_2}{2 \pi} \right)$ to normalize the wave function. Note that considering the limit 
+$f_2->\infty$  on equation \ref{log_free_particle} we have a solution that resembles the free particle propagator
+\begin{equation}
+\psi(x,t) =   \left( \frac{1}{2\pi \left( i \sigma_m^2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2}{2i \sigma_m^2 t} } 
+\end{equation}
+
+An important result of eq \ref{log_free_particle} is the wave packet dispersion relation:
+\begin{equation}\label{dispersion_free_particle}
+\frac{1}{4\Re(f_2(t))}  = \frac{ (1-2\sigma_m^2\Im(f_2)t)^2 + (2\sigma_m^2\Re(f_2)t)^2}{  4 \Re(f_2)  }
+\end{equation}
+
+
+%%%
+% log schr free moving  particle
+
+The "moving" free particle has the ansatz:
+
+\begin{equation}
+\gamma = -(x - x_t)^2 f_2(t) - (x-x_t)f_1(t) - f_0(t)
+\end{equation}
+
+where $x_t$ is a function of $t$ alone and $\dot x_t$ is a constant. Using last ansatz on \ref{log_schr} we get:
+{\tiny
+\begin{eqnarray}
+i \left( -(x - x_t)^2 \dot f_2 - (x-x_t) \dot f_1 -  \dot f_0 + 2(x - x_t)f_2 \dot x_t +f_1 \dot x_t \right) &=&
+ - \frac{\sigma_m^2}{2} \left( -2 f_2 + 4 (x-x_t)^2 f_2^2  + f_1^2   + 4(x-x_t)f_1f_2\right) \nonumber \\
+\dot f_2 & = & - 2i \sigma_m^2 f_2^2 \\
+\dot f_1 & = & 2 f_2 \dot x_t - 2i \sigma_m^2 f_1f_2 \\
+\dot f_0 & = & - \frac{ i \sigma_m^2}{ 2}  (f_1^2 - 2f_2) + f_1\dot x_t
+\end{eqnarray}
+}
+
+that gives the known solutions
+
+\begin{eqnarray}
+f_2(t) & = & \frac{f_2}{1 + 2i \sigma_m^2 f_2 t}  \\
+f_1(t) & = &  \frac{-i }{\sigma_m^2} \dot x_t\\
+f_0(t) & = & f_0 + \frac{1}{2} \log \left(1 + 2i \sigma_m^2 f_2 t  \right)  - \frac{i}{2\sigma_m^2} \dot x_t^2 t\\
+\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t \right)^{2} } \right)^{1/4} e^{ \frac{-(x-x_t)^2 f_2}{ 1 + 2i \sigma_m^2 f_2 t} +  \frac{i}{\sigma_m^2} \left(    \dot x_t (x-x_t) + \frac{1}{2} \dot x_t^2 t  \right) } 
+\end{eqnarray}
+
+which has the dispersion relation given by \ref{dispersion_free_particle}
+
+
+%%%
+% log schr harmonic
+
+\subsection{Log-Schr\"odinger Equation on harmonic potential}
+
+~~~~For the harmonic potential we have $V=\frac{m \omega'^2}{2} x'^2$, in dimensionless variables is 
+$V = \frac{x^2 \omega^2}{2} \frac{\varepsilon_t^2}{\varepsilon_x^2} =\frac{x^2 \omega^2 \varepsilon_t}{2 \sigma_m^2} $.
+Which is convenient to rewrite like this:
+
+\begin{equation}\label{har_pot}
+V = \frac{ \omega^2 \varepsilon_t}{2 \sigma_m^2}  \left( (x-x_t)^2 + 2 (x-x_t) x_t + x_t^2 \right)
+\end{equation}
+
+Considering the ansatz:
+
+\begin{equation}
+\gamma = -(x - x_t)^2 f_2(t) - (x-x_t)f_1(t) - f_0(t)
+\end{equation}
+
+where $x_t$ is a function of $t$ alone and $\dot x_t$ is not a constant. Using last ansatz on \ref{log_schr} we get:
+
+{\tiny
+\begin{eqnarray}\label{log_harmonic}
+i \left( -(x - x_t)^2 \dot f_2 - (x-x_t) \dot f_1 -  \dot f_0 + 2(x - x_t)f_2 \dot x_t +f_1 \dot x_t \right) &=&
+ - \frac{\sigma_m^2}{2} \left( -2 f_2 + 4 (x-x_t)^2 f_2^2  + f_1^2  + 4(x-x_t)f_1f_2\right) + \nonumber \\
+ &&  \frac{\omega^2}{2 \sigma_m^2} \left( (x-x_t)^2 + 2 (x-x_t) x_t + x_t^2 \right)  \nonumber \\
+\dot f_2 & = & - 2i \sigma_m^2 f_2^2 + \frac{i\omega^2}{2 \sigma_m^2}  \\
+\dot f_1 & = & 2 f_2 \dot x_t - 2i \sigma_m^2 f_1f_2 + x_t\frac{i\omega^2}{\sigma_m^2} \\
+\dot f_0 & = & - \frac{ i \sigma_m^2}{ 2}  (f_1^2 - 2f_2) + f_1\dot x_t + \frac{i\omega^2}{2\sigma_m^2} x_t^2
+\end{eqnarray}
+}
+
+that gives the solution known solution
+
+\begin{eqnarray}
+\ddot  x_t &=& - \omega^2 x_t \\
+f_2(t) &=& \frac{\omega}{2\sigma_m^2} \\
+f_1(t)  &=& -i \frac{\dot x_t}{\sigma_m^2} \\
+f_0(t) &=& i\frac{\omega t}{2}- i \int dt \left(  \frac{\dot x_t^2}{2\sigma_m^2} - \frac{\omega^2 x_t^2}{2 \sigma_m^2}\right)
+\end{eqnarray}
+that is the coherent state solution when $x_t(t) \neq 0$ and the ground state when $x_t = 0$
+
+
+An alternative solution of eq \ref{log_harmonic} is given by:
+
+\begin{eqnarray}\label{log_harmonic_sol}
+\ddot  x_t &=& - \omega^2 x_t \\
+f_2(t) &=& i \frac{\omega}{2\sigma_m^2} \tan \left(  \omega t  + \phi_0 \right) \\
+f_1(t)  &=& -i \frac{\dot x_t}{\sigma_m^2} \\
+f_0(t) &=& \frac{1}{2}\log \left( \cos(\omega t + \phi_0) \right) - i \int dt \left(  \frac{\dot x_t^2}{2\sigma_m^2} - \frac{\omega^2 x_t^2}{2 \sigma_m^2}\right)
+\end{eqnarray}
+
+making $x_t(t) = 0$ and $\phi_0 = \pi/2$ we have the solution that resembles the harmonic propagator. 
+
+Considering $\phi_0$ as a complex number, then dispersion relation of eq \ref{log_harmonic_sol} is
+
+\begin{equation}\label{dispersion_harmonic}
+\frac{1}{4\Re(f_2(t))} = \frac{ \sigma_m^2 }{2 \omega \tanh(Im(\phi_0))}  (\cos^2(\omega t + \Re(\phi_0)) + \tanh^2(\Im(\phi_0)) \sin^2(\omega t + \Re(\phi_0)))
+\end{equation}
+
+
+
+%%%
+% newton grad log schr free particle
+
+\subsection{Newton Grad Log Shcr\"odinger Equation on free particle}
+
+~~~~For the free particle in one dimension we have
+
+\begin{equation}
+\frac{d \eta}{dt} =  \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta
+\end{equation}
+
+and then the cinematic equation for z is
+
+\begin{equation}
+z  =  z_0 + \int_0^t dt \eta(t)
+\end{equation}
+
+If we start from the initial condition
+
+\begin{equation}
+\gamma(z,0) = -z^2 f_2 - f_0
+\end{equation} 
+
+then for each initial position $z_0$ of the ensemble of particles  on the complex plane, we have the initial velocity
+
+\begin{equation}
+\eta_0 = 2 i \sigma_m^2 f_2 z_0
+\end{equation}
+
+even more, since $\partial_l \partial^l \eta = 0$, then $\eta_0$ is constant, then the cinematic equation becomes
+
+\begin{equation}
+z(t) = z_0(1+2i\sigma_m^2f_2t)
+\end{equation}
+
+in this case the dispersion relation is given by 
+
+\begin{eqnarray}
+\langle z(t) \bar z(t) \rangle -  \langle z(t) \rangle \langle \bar z(t) \rangle  & = & 
+(\langle z_0 \bar z_0 \rangle -  \langle z_0 \rangle \langle \bar z_0 \rangle)|1+2i\sigma_m^2f_2t|^2 \nonumber \\
+& = & \sigma_0^2 \left( (1 - 2\sigma_m^2\Im(f_2)t)^2 + (2\sigma_m^2\Re(f_2)t)^2 \right) \label{dispersion_free_particle_2}
+\end{eqnarray}
+
+which is equal to the dispersion relation \ref{dispersion_free_particle}
+
+
+The moving free particle has the initial condition 
+\begin{equation}
+\gamma(z,0) = -(z-a_0)^2 f_2 - (z-a_0) f_1 - f_0
+\end{equation} 
+
+where we use $a_0$ to indicate a constant complex number, that indicates the center of the distribution, which is different from $z_0$, that is the initial condition of each particle on the ensemble.
+
+Then for each initial position $z_0$ of the ensemble of particles  on the complex plane, we have the initial velocity
+
+\begin{equation}
+\eta_0 = 2 i \sigma_m^2 f_2 (z_0 - a_0) + i \sigma_m^2 f_1
+\end{equation}
+
+again this is constant, then the cinematic equation becomes
+
+\begin{equation}
+z(t) = z_0(1+2i\sigma_m^2f_2t) + i\sigma_m^2(f_1 - 2f_2a_0)t
+\end{equation}
+
+even though the mean value changes, we have the same dispersion \ref{dispersion_free_particle_2}.
+
+
+%%%
+% newton grad log schr harmonic potential
+
+\subsection{Newton Grad Log Shcr\"odinger Equation on harmonic potential}
+
+~~~~For the particle in one dimensional harmonic potential we have
+
+\begin{equation}
+\frac{d \eta}{dt} = - \omega^2 z + \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta
+\end{equation}
+
+using the initial condition 
+\begin{equation}
+\gamma(z,0) = -(z-a_0)^2 f_2 - (z-a_0) f_1 - f_0
+\end{equation} 
+
+then for each initial position $z_0$ of the ensemble of particles  on the complex plane, we have the initial velocity
+
+\begin{equation}
+\eta_0 = 2 i \sigma_m^2 f_2 (z_0 - a_0) + i \sigma_m^2 f_1
+\end{equation}
+
+since again we have $\frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta = 0$ then the cinematic solution is given by
+
+\begin{eqnarray}
+z(t) & = & z_0 \cos(wt) + \frac{\eta_0}{w} \sin(wt) \nonumber \\
+& = & z_0 \left(  \cos(\omega t) + \frac{2i\sigma_m^2f_2}{\omega} \sin(\omega t)\right) + \frac{i \sigma_m^2 (f_1 -2f_2a_0)}{\omega}\sin(\omega t)
+\end{eqnarray}
+
+and dispersion relation
+
+\begin{equation}
+\sigma^2(t) = \sigma_0^2\left( \left( \cos(\omega t) - \frac{2\sigma_m^2\Im(f_2)}{\omega} \sin(\omega t) \right)^2 + \left( \frac{2\sigma_m^2\Re(f_2)}{\omega} \sin(\omega t)  \right)^2 \right)
+\end{equation}
+ 
+which is equal to the relation \ref{dispersion_harmonic} once that we recognize 
+
+\begin{eqnarray}
+\Re(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cosh(\Im(\phi_0)) \sinh(\Im(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))}  \\
+\Im(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cos(\Re(\phi_0)) \sin(\Re(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))} 
+\end{eqnarray}
+
+\printbibliography
+
+\end{document}
