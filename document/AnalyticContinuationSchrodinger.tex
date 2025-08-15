@@ -180,7 +180,7 @@ the velocity. Before discussing more about this equation, let's study the Log-Sc
 %%%
 % log schr free particle
 
-\section{Applications}
+\section{Preliminars}
 
 \subsection{Log-Schr\"odinger Equation on free particle}
 
@@ -316,7 +316,7 @@ Considering $\phi_0$ as a complex number, then dispersion relation of eq \ref{lo
 %%%
 % newton grad log schr free particle
 
-\subsection{Newton Grad Log Shcr\"odinger Equation on free particle}
+\subsection{Newton Grad Log Schr\"odinger Equation on free particle}
 
 ~~~~For the free particle in one dimension we have
 
@@ -380,6 +380,18 @@ z(t) = z_0(1+2i\sigma_m^2f_2t) + i\sigma_m^2(f_1 - 2f_2a_0)t
 
 even though the mean value changes, we have the same dispersion \ref{dispersion_free_particle_2}.
 
+Note that the velocity
+
+\begin{equation}
+\eta = \frac{ 2i\sigma_m^2f_2t z - (i\sigma_m^2(f_1 - 2f_2a_0))(1-2i\sigma_m^2f_2t)  }{1+2i\sigma_m^2f_2t}
+\end{equation}
+
+always follows $\frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta = 0$. And the following energy relation holds for each particle
+
+\begin{equation}
+\frac{\eta^2}{2} = \frac{\eta_0^2}{2}
+\end{equation}
+
 
 %%%
 % newton grad log schr harmonic potential
@@ -422,6 +434,100 @@ which is equal to the relation \ref{dispersion_harmonic} once that we recognize
 \Re(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cosh(\Im(\phi_0)) \sinh(\Im(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))}  \\
 \Im(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cos(\Re(\phi_0)) \sin(\Re(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))} 
 \end{eqnarray}
+
+An special case the dispersion relation is when $\Im(f_2)=0$ and $\Re(f_2) = \frac{\omega}{2\sigma_m^2}$ where we recover the coherent state $\sigma^2(t) = \frac{\sigma_m^2}{2\omega}$, or the ground state when $a_0=0$.
+
+As sanity check note the velocity:
+
+\begin{equation}
+\eta = \frac{\omega\left(  z (  2i\sigma_m^2f_2 \cos(\omega t) - \omega \sin(\omega t)) + i \sigma_m^2(f_1 - 2f_2 a_0)  \right)}{\omega \cos(\omega t) + 2i\sigma_m^2f_2 \sin(\omega t)} 
+\end{equation}
+
+always follows $\frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta = 0$. And the following energy relation holds for each particle
+
+\begin{equation}
+\frac{\eta^2}{2} + \frac{\omega^2 z^2}{2} = \frac{\eta_0^2}{2} + \frac{\omega^2 z_0^2}{2}
+\end{equation}
+
+
+%%%
+% newton grad log shcr harmonic with poles
+An important result of the Schr\"odinger equation are the excited eigen states, the solutions are given by:
+
+\begin{equation}
+\phi_n(x) = H_n\left( \sqrt{\frac{\omega}{\sigma_m^2}}x \right) e^{-\frac{\omega}{2\sigma_m^2}x^2}
+\frac{1}{\sqrt{2^n n!}}\left(\frac{\omega}{\pi \sigma_m^2} \right)^{1/4}
+\end{equation}
+
+where $H_n$ are the Hermite polynomials, two important facts about them that we highlight is that have $n$ real zeros and all are distinct, lets call $p_{n,j}$ the zeros of $H_n(x)$ for $j=1,...,n$. Making the change of variable $z\rightarrow \sqrt{\frac{\omega}{\sigma_m^2}}z$, the eigen state of the harmonic oscillator has the velocity:
+
+\begin{equation}
+\eta_n = i\omega z - \sum_{j=1}^{n} \frac{i \omega}{z - p_{n,j}}
+\end{equation}
+
+and acceleration:
+
+\begin{equation}
+\frac{d\eta_n}{dt} = -\omega^2 z + \sum_{j=1}^{n} \frac{\omega^2}{ \left( z - p_{n,j} \right)^3}
+\end{equation}
+
+And the following energy relation holds for each particle
+
+\begin{equation}
+\frac{\eta_n^2}{2} + \frac{\omega^2 z^2}{2} + \frac{\omega^2}{2}\left(\sum_{j=1}^{n} \frac{1}{ \left( z - p_{n,j} \right)^2} \right) = \frac{\eta_0^2}{2} + \frac{\omega^2 z_0^2}{2} + \frac{\omega^2}{2}\left(\sum_{j=1}^{n} \frac{1}{ \left( z_0 - p_{n,j} \right)^2} \right)
+\end{equation}
+
+
+We can observe that the nodal points of $\phi_n$ become poles of $\eta_n$, in the case of eigen states this poles are fixed, but in general they will move. Around simple poles we have the following wave function
+
+\begin{equation}
+\psi = (x-p(t))\varphi(x,t)
+\end{equation}
+
+where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$.
+
+
+
+
+
+\section{Results}
+
+~~~~From our preliminar analysis we approximate the velocity in complex plane by the following function
+
+\begin{equation}\label{eta_numeric}
+\eta = \sum_{j=0}^{m} a_j(t) z^j + b \sum_{j=1}^{n} \frac{1}{z - p_j(t)}
+\end{equation}
+
+with constant limits $m$ and $n$. Some important assumptions on eq \ref{eta_numeric} are:
+
+\begin{itemize}
+\item The residue for all the poles is the same, and constant.
+\item The singularities of $\eta$ can be approximated by simple poles (no branch cuts, poles of higher order, etc).
+\item The poles number $n$ is constant, no creation or annihilation of them.
+\item The polynomial part also has a fixed number of elements, but for some times they can get the value $0$ without any problem.
+\end{itemize}
+
+
+If we have an initial wave function $\psi(x,0)$ from which we want to calculate some mean observables $\langle O(z,\eta) \rangle$, we can 
+ use Newton Grad Log Schr\"odinger equation \ref{newton_complex} with the following proposed algorithm:
+
+\begin{enumerate}
+\item Select an ensemble of $N$ initial positions $z_{0,l} = x_{0,l} + i0$, where $x_{0,l}$ are either random samples of $|\psi(x,0)|^2$ and weight $w_l=\frac{1}{N}$, or regular grid of points on the domain of $\psi(x,0)$ and weight it like $w_l= |\psi(x_{0,l},0)|^2 \Delta x$.
+\item For the ensemble of points calculate the velocity $\eta_{0,l} = -i \sigma_m^2 \partial \log(\psi)$.
+\item Make a fit of $\eta_{0,l}$ vs $z_{0,l}$ using a Rational Function approximation, with this is posible to find the poles of $\eta(z,0)$
+and determine the order $n$ {\bf check that all the residues are the same?}. Then write $\eta$ in the form of eq \ref{eta_numeric},
+ if wanted is posible to increase the order $m$ at this initial state considering zero values for the extra added terms.
+\item Use equation \ref{newton_complex} to approximate the acceleration, we use analytical derivatives of our fitted $\eta$ for the
+velocity potential.
+\item With any integrator of your choice find new values of $\eta$ and $z$ after an small time step. Update the poles position $p_j(t)$ with equation \ref{simple_pole_movement} and calculate the new values of $a_j(t)$  using LSQ method (or other of choice).
+\item Go to point 4 until the final time is reached.
+\item  The mean observable is given by $\langle O(z,\eta) \rangle = \sum_{l=1}^{N} O(z_{t,l}, \eta_{t,l}) w_l$ 
+\end{enumerate}
+
+
+
+
+
 
 \printbibliography
 
