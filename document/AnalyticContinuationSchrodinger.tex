@@ -177,11 +177,12 @@ the velocity. Before discussing more about this equation, let's study the Log-Sc
 
 
 
-%%%
-% log schr free particle
+
 
 \section{Preliminars}
 
+%%%
+% log schr free particle
 \subsection{Log-Schr\"odinger Equation on free particle}
 
 ~~~~For the free particle we have $V=0$. Let us study the dispersion of a Gaussian wave packet, we begin with the ansatz
@@ -459,7 +460,7 @@ An important result of the Schr\"odinger equation are the excited eigen states, 
 \frac{1}{\sqrt{2^n n!}}\left(\frac{\omega}{\pi \sigma_m^2} \right)^{1/4}
 \end{equation}
 
-where $H_n$ are the Hermite polynomials, two important facts about them that we highlight is that have $n$ real zeros and all are distinct, lets call $p_{n,j}$ the zeros of $H_n(x)$ for $j=1,...,n$. Making the change of variable $z\rightarrow \sqrt{\frac{\omega}{\sigma_m^2}}z$, the eigen state of the harmonic oscillator has the velocity:
+where $H_n$ are the Hermite polynomials, two important facts about them that we highlight is that have $n$ real zeros and all are distinct, lets call $p_{n,j}$ the zeros of $H_n(x)$ for $j=1,...,n$. Making the change of variable $\sqrt{\frac{\omega}{\sigma_m^2}}z \rightarrow z$, the eigen state of the harmonic oscillator has the velocity:
 
 \begin{equation}
 \eta_n = i\omega z - \sum_{j=1}^{n} \frac{i \omega}{z - p_{n,j}}
@@ -478,13 +479,7 @@ And the following energy relation holds for each particle
 \end{equation}
 
 
-We can observe that the nodal points of $\phi_n$ become poles of $\eta_n$, in the case of eigen states this poles are fixed, but in general they will move. Around simple poles we have the following wave function
-
-\begin{equation}
-\psi = (x-p(t))\varphi(x,t)
-\end{equation}
-
-where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$.
+We can observe that the nodal points of $\phi_n$ become poles of $\eta_n$, in the case of eigen states this poles are fixed, but in general they will move. 
 
 
 
@@ -492,7 +487,93 @@ where we assume that $\varphi(x,t)$ is regular and different from zero in the vi
 
 \section{Results}
 
-~~~~From our preliminar analysis we approximate the velocity in complex plane by the following function
+%%%%
+% simple poles
+\subsection{Movement of simple poles}
+
+Around simple poles we have the following wave function
+
+\begin{equation}
+\psi(x,t) = (x-p(t))\varphi(x,t)
+\end{equation}
+
+where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$. Then we have the following equations
+
+\begin{equation}
+\frac{d \psi}{dt}   =  - \dot p \varphi + (x-p) \dot \varphi 
+\end{equation}
+
+and
+
+\begin{eqnarray}
+\frac{d \psi}{dt} & = & \frac{\partial \psi}{\partial t} + \dot p \frac{\partial \psi}{\partial x} \nonumber \\
+& = & \frac{i \sigma_m^2}{2} \frac{\partial^2 \psi}{\partial x^2}  + \frac{V}{\varepsilon_t}\psi + \dot p \frac{\partial \psi}{\partial x} \nonumber \\
+& = & \frac{i \sigma_m^2}{2} \left( 2 \frac{\partial \varphi}{\partial x}  + (x-p)\frac{\partial^2 \varphi}{\partial x^2} \right)  + \frac{V}{\varepsilon_t}(x-p)\varphi
++ \dot p \left( \varphi + (x-p)\frac{\partial \varphi}{\partial x} \right)
+\end{eqnarray}
+
+then in the limit $x \rightarrow p$ we have
+
+\begin{equation}
+\dot p = - \frac{i \sigma_m^2}{2} \frac{\partial \log(\varphi)}{\partial x}
+\end{equation}
+
+that is one half of the finite part of the velocity $\eta$.
+
+
+%%%
+% higher poles
+\subsection{Movement of higher poles}
+
+Around simple poles we have the following wave function
+
+\begin{equation}
+\psi(x,t) = (x-p(t))^l\varphi(x,t)
+\end{equation}
+
+where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$ and $l>1$. Then we have the following equations
+
+\begin{equation}
+\frac{d \psi}{dt}   =  - \dot p l (x-p)^{l-1}\varphi + (x-p)^l \dot \varphi 
+\end{equation}
+
+and
+
+\begin{eqnarray}
+\frac{d \psi}{dt} & = & \frac{\partial \psi}{\partial t} + \dot p \frac{\partial \psi}{\partial x} \nonumber \\
+& = & \frac{i \sigma_m^2}{2} \frac{\partial^2 \psi}{\partial x^2}  + \frac{V}{\varepsilon_t}\psi + \dot p \frac{\partial \psi}{\partial x} \nonumber \\
+& = & \frac{i \sigma_m^2}{2} \left(  l(l-1)(x-p)^{l-2}\varphi +   2 l(x-p)^{l-1}\frac{\partial \varphi}{\partial x}  + (x-p)^l\frac{\partial^2 \varphi}{\partial x^2} \right)  + \frac{V}{\varepsilon_t}(x-p)^l\varphi \nonumber \\
+&&+ \dot p \left( l(x-p)^{l-1}\varphi + (x-p)^l\frac{\partial \varphi}{\partial x} \right)
+\end{eqnarray}
+
+then in the limit $x \rightarrow p$ we have
+
+\begin{equation}
+(x-p)\dot p = - \frac{i \sigma_m^2}{4} (l-1)
+\end{equation}
+
+we can regularize the equation making the change of variable $t = \tau^n$, then we obtain
+
+\begin{equation}
+\frac{(x-p)}{\tau} \frac{d p}{d \tau} =  - \frac{i \sigma_m^2}{4} (l-1) n \tau^{n-2}
+\end{equation}
+
+on our regularization $n\frac{(x-p)}{\tau} \sim \frac{d p}{d \tau} $ then
+
+\begin{eqnarray}
+p - p(\tau=0) &\sim&  \int d\tau \tau^{\frac{n}{2} -1 }n\sqrt{- \frac{i \sigma_m^2}{4} (l-1)} \nonumber \\
+&\sim& \pm \sqrt{- i \sigma_m^2 (l-1) }  \tau^{\frac{n}{2}} \nonumber \\
+p - p_0&\sim& \pm \sqrt{- i \sigma_m^2 (l-1) } t^{\frac{1}{2}}
+\end{eqnarray}
+
+
+
+
+%%%
+% algorithm
+\subsection{A practical algorithm}
+
+From our preliminar analysis we approximate the velocity in complex plane by the following function
 
 \begin{equation}\label{eta_numeric}
 \eta = \sum_{j=0}^{m} a_j(t) z^j + b \sum_{j=1}^{n} \frac{1}{z - p_j(t)}
@@ -526,7 +607,16 @@ velocity potential.
 
 
 
+\section{Future directions}
 
+\begin{itemize}
+\item Branch cuts model Fermions?
+\item ND problems need Rational Function approximation on ND complex plane.
+\item Environment interaction allows mechanism to create and annihilate poles? If so $\rightarrow$ classical mechanics and/or thermodynamical limit
+\item Trajectory on time's complex plane does turn on thermodynamics?
+\item Entanglement can be modeled with several complex sheets?
+\item Similar interacting particles can be modeled as a 3D complex plane ensemble? 
+\end{itemize}
 
 
 \printbibliography
