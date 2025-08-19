@@ -7,6 +7,7 @@ using LinearAlgebra
 using Arpack
 using Gridap
 using Infiltrator
+using Roots
 
 
 #########
@@ -37,102 +38,10 @@ function to_plot_femfunctions(L, V, ψ_coeffs, M)
     return x_plot, ψ_values
 end
 
-# Plot the results using Makie
-function plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
-    fig = Figure(size=(1200, 800))
-    
-    # Real part comparison
-    ax1 = Axis(fig[1, 1], 
-        title="Real Part Comparison", 
-        xlabel="Position", 
-        ylabel="Real(ψ)")
-    
-    lines!(ax1, x, real.(ψ_numerical), color=:blue, linewidth=2, label="Numerical")
-    lines!(ax1, x, real.(ψ_analytical), color=:red, linestyle=:dash, linewidth=2, label="Analytical")
-    axislegend(ax1, position=:rt)
-    
-    # Imaginary part comparison
-    ax2 = Axis(fig[1, 2], 
-        title="Imaginary Part Comparison", 
-        xlabel="Position", 
-        ylabel="Imag(ψ)")
-    
-    lines!(ax2, x, imag.(ψ_numerical), color=:blue, linewidth=2, label="Numerical")
-    lines!(ax2, x, imag.(ψ_analytical), color=:red, linestyle=:dash, linewidth=2, label="Analytical")
-    axislegend(ax2, position=:rt)
-    
-    # Probability density comparison
-    ax3 = Axis(fig[2, 1:2], 
-        title="Probability Density Comparison", 
-        xlabel="Position", 
-        ylabel="|ψ|²")
-    
-    lines!(ax3, x, abs2.(ψ_numerical), color=:blue, linewidth=2, label="Numerical")
-    lines!(ax3, x, abs2.(ψ_analytical), color=:red, linestyle=:dash, linewidth=2, label="Analytical")
-    axislegend(ax3, position=:rt)
-    
-    # Error analysis
-    norm_error = norm(ψ_numerical - ψ_analytical) / norm(ψ_analytical)
-    
-    Label(fig[0, 1:2], "Harmonic Oscillator Coherent State: After t = $(round(tmax, digits=3)) (Error: $(round(norm_error, digits=6)))",
-          fontsize=20)
-    
-    return fig
-end
-
-
 ######################################
 # coherent state harmonic oscillator #
 ######################################
-
-"""
-harmonic oscillator using split fourier
-"""
-function solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
-    @unpack π_k, ε_x, ε_t = p
-    @unpack k_fft, P_fft, P_ifft = p
-
-    dt = t[2] - t[1]
-    dx = x[2] - x[1]
-    nt = length(t)
-    
-    # Potential energy (harmonic oscillator) 
-    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    V = f.(x) 
-    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2
-    
-    # Kinetic energy in Fourier space
-    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
-    T = kin.(k_fft)
-    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
-    
-    # Define evolution operators
-    exp_V = exp.(-im * V * dt/2)
-    exp_T = exp.(-im * T * dt)
-    
-    # Initialize wavefunction
-    ψ = copy(ψ_initial)
-    
-    # Normalize
-    ψ = ψ ./ sqrt(sum(abs2.(ψ)) * dx)
-
-    # Time evolution using split-step Fourier method
-    for i in 1:(nt-1)
-        # Apply half-step of potential
-        ψ = ψ .* exp_V
-        
-        # Apply full step of kinetic energy in Fourier space
-        ψ_k = P_fft * ψ
-        ψ_k = ψ_k .* exp_T
-        ψ = P_ifft *ψ_k
-        
-        # Apply second half-step of potential
-        ψ = ψ .* exp_V
-    end
-    
-    return ψ
-end
-
+# fem
 function main()
     # Solve the system
     p = (
@@ -184,7 +93,8 @@ function main()
     ψ_initial(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], t0, p);
     ψ_0 = get_free_dof_values(interpolate(ψ_initial, V))
 
-    x, ψ_numerical = to_plot_femfunctions(L, V, solve_harmonic_oscillator_MSP(msp, V, t, p, ψ_0), msp.M)
+    # x, ψ_numerical = to_plot_femfunctions(L, V, solve_harmonic_oscillator_MSP(msp, V, t, p, ψ_0), msp.M)
+    x, ψ_numerical = to_plot_femfunctions(L, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
 
     # Compute analytical solution at final time
     ψ_analytical(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], tmax, p)
@@ -192,7 +102,8 @@ function main()
 
 
     # Generate and save the plot
-    fig = plot_comparison(x, tmax, ψ_numerical, ψ_f)
+    fig = Figure(size=(1200, 800))
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, ψ_numerical, ψ_f)
 
     # Display the figure if running interactively
     display(fig)
@@ -221,30 +132,7 @@ function main()
     # end
 end
 
-
-"""
-harmonic oscillator using Crank-Nicolson and FEM
-"""
-function solve_harmonic_oscillator_MSP(msp::MSP, V, t, p, ψ_initial)
-    @unpack M, S, P = msp
-    @unpack π_k, ε_x, ε_t = p
-
-    dt = t[2] - t[1]
-    nt = length(t)
-    H = P + S * 1/2 * p.ε_x ^ 2 /p.ε_t # we reescale the stiffnes matrix with the adimensional parameters 
-
-    # precompute matrices for Crank-Nicolson
-    A = factorize(M + im*dt/2*H)
-    B = (M - im*dt/2*H)
-
-    ψ_fem = copy(ψ_initial)
-
-    for i in 1:(nt-1)
-        ψ_fem = A \ (B * ψ_fem)
-    end
-    return ψ_fem
-end
-
+# ssfm
 function main_()
     # Set up simulation parameters
     p = (
@@ -289,17 +177,74 @@ function main_()
     ψ_initial = QuantumRecurrencePlots.coherent_state_1D(x, t0, p)
 
     # Solve using split-step Fourier method
-    ψ_numerical = solve_harmonic_oscillator_fft(x, t, p, ψ_initial)
+    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+    ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, ψ_initial, f)
+    
 
     # Compute analytical solution at final time
     ψ_analytical = QuantumRecurrencePlots.coherent_state_1D(x, tmax, p)
 
 
     # Generate and save the plot
-    fig = plot_comparison(x, tmax, ψ_numerical, ψ_analytical)
+    fig = Figure(size=(1200, 800))
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, ψ_numerical, ψ_analytical)
 
     # Display the figure if running interactively
     display(fig)
 end
 
+####################################
+# eigen states harmonic oscillator #
+####################################
 
+# ssfm
+function main__()
+    p = (
+        N = 512,      # Number of grid points (higher for better accuracy)
+        L_0 = 100.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
+        T_0 = 14.0,     # Time scale
+        ħ = 12.0,       # hbar
+        m = 2.0,       # mass of particle
+        k = 13.0,        # harmonic potential mω^2
+        nt = 10000,     # number of time steps 
+        τ = 4.22121,    # τ times period of oscillation is the final time
+    );
+    #
+    # prepare the adimensional parameters, not all scales are independent
+    p = make_ε_x(p);
+    p = make_ε_t(p);
+    p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p);
+
+    # now consider all adimensional variables
+
+    n = 10; # eigen state
+    x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
+    L = 2*x_max/sqrt(sqrt(p.π_k)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
+    x = LinRange(-L/2, L/2 - L/p.N, p.N);
+
+
+    # prepare parameters for FFT
+    p = QuantumRecurrencePlots.makeParsFFT_1D(x, p)
+     
+    # Time parameters
+    tmax = p.τ*QuantumRecurrencePlots.get_periodHarmonicPotential(p) # Evolve for one full period
+    t0 = 0.0 # initial time
+    t = LinRange(t0, tmax, p.nt)
+
+    psi_0 = QuantumRecurrencePlots.eigen_state_1D(x, t0, n, p);
+
+    # Solve using split-step Fourier method
+    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
+
+    psi_t = QuantumRecurrencePlots.eigen_state_1D(x, tmax, n, p)
+    
+    
+    # Generate and save the plot
+    fig = Figure(size=(1200, 800))
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
+
+    # Display the figure if running interactively
+    display(fig)
+end

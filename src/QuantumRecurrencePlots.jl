@@ -17,6 +17,7 @@ using Roots
 include("utils.jl")
 include("PolynomialUtils.jl")
 include("SchrodingerMatrix.jl")
+include("Plotting.jl")
 
 # ---- exports ----
 export make_ε_x,

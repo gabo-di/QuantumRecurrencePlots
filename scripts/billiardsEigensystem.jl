@@ -6,7 +6,6 @@ using DrWatson
 @quickactivate "QuantumRecurrencePlots"
 using QuantumRecurrencePlots
 using Arpack
-# using JacobiDavidson, KrylovKit
 using CairoMakie, GridapMakie
 using SpecialFunctions
 

@@ -28,6 +28,11 @@ function makeParsFFT_1D(x, p)
     return merge(p,p_)
 end
 
+function kineticEnergy(k_fft, p)
+    @unpack ε_x, ε_t = p
+    return 1/2 * ε_x ^ 2 /ε_t * k_fft^2
+end
+
 #####################################
 # Adimensional Schrodinger Equation # 
 #####################################
@@ -59,6 +64,77 @@ function make_ε_t(p)
     @pack! p_ = ε_t 
     return merge(p,p_)
 end
+
+
+####################
+# Time integration #
+####################
+function solve_schr_SSFM(x, t, p, ψ_initial, f)
+    @unpack ε_x, ε_t = p
+    @unpack k_fft, P_fft, P_ifft = p
+
+    dt = t[2] - t[1]
+    dx = x[2] - x[1]
+    nt = length(t)
+    
+    # Potential energy 
+    V = f.(x) 
+    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
+    
+    # Kinetic energy in Fourier space
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
+    T = kin.(k_fft)
+    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
+    
+    # Define evolution operators
+    exp_V = exp.(-im * V * dt/2)
+    exp_T = exp.(-im * T * dt)
+    
+    # Initialize wavefunction
+    ψ = copy(ψ_initial)
+    
+    # Normalize
+    # ψ = ψ ./ sqrt(sum(abs2.(ψ))*dx)
+
+    ψ_k = P_fft * ψ # buffer
+
+    # Time evolution using split-step Fourier method
+    for i in 1:(nt-1)
+        # Apply half-step of potential
+        ψ .= ψ .* exp_V
+        
+        # Apply full step of kinetic energy in Fourier space
+        ψ_k .= P_fft * ψ
+        ψ_k .= ψ_k .* exp_T
+        ψ .= P_ifft *ψ_k
+        
+        # Apply second half-step of potential
+        ψ .= ψ .* exp_V
+    end
+    
+    return ψ
+end
+
+function solve_schr_CrNi(msp, t, p, ψ_initial)
+    @unpack M, S, P = msp
+    @unpack ε_x, ε_t = p
+
+    dt = t[2] - t[1]
+    nt = length(t)
+    H = P + S * 1/2 * p.ε_x ^ 2 /p.ε_t # we reescale the stiffnes matrix with the adimensional parameters 
+
+    # precompute matrices for Crank-Nicolson
+    A = factorize(M + im*dt/2*H)
+    B = (M - im*dt/2*H)
+
+    ψ_fem = copy(ψ_initial)
+
+    for i in 1:(nt-1)
+        ψ_fem .= A \ (B * ψ_fem)
+    end
+    return ψ_fem
+end
+
 
 #########################
 # For Circular Billiard #
@@ -136,6 +212,25 @@ function coherent_state_1D(x, t, p)
     return prefactor .* gaussian .* phase
 end
 
+function eigen_state_1D(x, t, n, p)
+    @unpack π_k, ε_x, ε_t = p
+    ω = sqrt(π_k)
+
+    # Width parameter
+    σ² = ε_x^2/(ε_t*ω)
+
+    gaussian = exp.(-(x).^2 ./ (2σ²))
+
+    # note that n = 0 1 2 3 ....  sqrt(2) comes from He_n -> H_n
+    pol = Hermite_hat(n+1)(sqrt(2/σ²) .* x)[:,n+1]
+
+    prefactor = (1/(π*σ²)) ^ (1/4)
+
+    phase = exp( - im*t*(n+1/2)*ω )
+
+    return prefactor .* pol .* gaussian .* phase
+end
+
 function make_harmonicPotential_π_k(p)
     @unpack m, T_0, L_0, k = p   
     π_k = k/m * T_0^2
@@ -156,10 +251,6 @@ function harmonicPotential(x, p)
     return 1/2 * π_k * ε_t / ε_x ^ 2 * x^2
 end
 
-function kineticEnergy(k_fft, p)
-    @unpack ε_x, ε_t = p
-    return 1/2 * ε_x ^ 2 /ε_t * k_fft^2
-end
 
 #############################
 # For Quantum Free Particle #
