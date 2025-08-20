@@ -28,8 +28,8 @@ function main()
 
     # now consider all adimensional variables
 
-    n = 4; # eigen state
-    x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
+    n = 6; # eigen state for size of grid
+    x_max = fzero(x->exp(-x^2/2)*x^(n) - 0.001, sqrt(2*n-1));
     L = 2*x_max/sqrt(sqrt(p.π_k)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
@@ -42,20 +42,22 @@ function main()
     t0 = 0.0 # initial time
     t = LinRange(t0, tmax, p.nt)
 
-    psi_0 = QuantumRecurrencePlots.eigen_state_1D(x, t0, 0, p) .* (x.^2 ./2 .- 0.05);
+    # c = [1,1,sqrt(2), sqrt(6)] # eigenstates hermite_hat are He_n / sqrt(n!)
+    c = [1,1]  
+    psi_0 = QuantumRecurrencePlots.eigen_state_sum_1D(x, t0, c, p);
     psi_0 .= psi_0 / sqrt(sum(abs2.(psi_0)))
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f)
 
-    # psi_t = QuantumRecurrencePlots.eigen_state_1D(x, tmax, 0, p)
-    # psi_t .= psi_t / sqrt(sum(abs2.(psi_t)))
+    psi_t = QuantumRecurrencePlots.eigen_state_sum_1D(x, tmax, c, p)
+    psi_t .= psi_t / sqrt(sum(abs2.(psi_t)))
     
     
     # Generate and save the plot
     fig = Figure(size=(1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_0)
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
 
     # Display the figure if running interactively
     display(fig)

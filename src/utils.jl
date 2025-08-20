@@ -115,6 +115,76 @@ function solve_schr_SSFM(x, t, p, ψ_initial, f)
     return ψ
 end
 
+function solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
+    @unpack ε_x, ε_t = p
+    @unpack k_fft, P_fft, P_ifft = p
+
+    dt = t[2] - t[1]
+    dx = x[2] - x[1]
+    nt = length(t)
+    
+    # Potential energy 
+    V = f.(x) 
+    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
+    
+    # Kinetic energy in Fourier space
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
+    T = kin.(k_fft)
+    # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
+    
+    x_1 = 1 / (2 - cbrt(2))
+    x_0 = -cbrt(2) / (2 - cbrt(2))
+
+
+    # Define evolution operators
+    exp_V_1 = exp.(-im * V * dt*x_1/2)
+    exp_T_1 = exp.(-im * T * dt*x_1)
+    exp_V_0 = exp.(-im * V * dt*x_0/2)
+    exp_T_0 = exp.(-im * T * dt*x_0)
+    
+    # Initialize wavefunction
+    ψ = copy(ψ_initial)
+    
+    # Normalize
+    # ψ = ψ ./ sqrt(sum(abs2.(ψ))*dx)
+
+    ψ_k = P_fft * ψ # buffer
+
+    # Time evolution using split-step Fourier method
+    for i in 1:(nt-1)
+        # Apply half-step of potential x_1
+        ψ .= ψ .* exp_V_1
+        
+        ψ_k .= P_fft * ψ
+        ψ_k .= ψ_k .* exp_T_1
+        ψ .= P_ifft *ψ_k
+        
+        ψ .= ψ .* exp_V_1
+
+
+        # Apply half-step of potential x_0
+        ψ .= ψ .* exp_V_0
+        
+        ψ_k .= P_fft * ψ
+        ψ_k .= ψ_k .* exp_T_0
+        ψ .= P_ifft *ψ_k
+        
+        ψ .= ψ .* exp_V_0
+
+        # Apply half-step of potential x_1
+        ψ .= ψ .* exp_V_1
+        
+        ψ_k .= P_fft * ψ
+        ψ_k .= ψ_k .* exp_T_1
+        ψ .= P_ifft *ψ_k
+        
+        ψ .= ψ .* exp_V_1
+
+    end
+    
+    return ψ
+end
+
 function solve_schr_CrNi(msp, t, p, ψ_initial)
     @unpack M, S, P = msp
     @unpack ε_x, ε_t = p
@@ -212,23 +282,37 @@ function coherent_state_1D(x, t, p)
     return prefactor .* gaussian .* phase
 end
 
-function eigen_state_1D(x, t, n, p)
+function eigen_state_sum_1D(x, t, c, p)
     @unpack π_k, ε_x, ε_t = p
     ω = sqrt(π_k)
+
+    # number of eigenstates
+    n = length(c)
 
     # Width parameter
     σ² = ε_x^2/(ε_t*ω)
 
     gaussian = exp.(-(x).^2 ./ (2σ²))
 
-    # note that n = 0 1 2 3 ....  sqrt(2) comes from He_n -> H_n
-    pol = Hermite_hat(n+1)(sqrt(2/σ²) .* x)[:,n+1]
+    # ...v sqrt(2) comes from He_n -> H_n
+    pol = Hermite_hat(n)(sqrt(2/σ²) .* x)
+    ss = zeros(ComplexF64, length(x))
+    for i in eachindex(c)
+        phase = exp( - im*t*(i-1/2)*ω ) # i starts in 1, but energy considers 0
+        ss .+= pol[:,i] .* c[i] .* phase
+    end
+
 
     prefactor = (1/(π*σ²)) ^ (1/4)
 
-    phase = exp( - im*t*(n+1/2)*ω )
+    return prefactor .* ss .* gaussian 
+end
 
-    return prefactor .* pol .* gaussian .* phase
+function eigen_state_1D(x, t, n, p)
+    # note eigen state is n = 0 1 2 3 so need to add 1 
+    c = zeros(n+1)
+    c[end] = 1
+    eigen_state_sum_1D(x, t, c, p)
 end
 
 function make_harmonicPotential_π_k(p)
