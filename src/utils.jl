@@ -76,7 +76,6 @@ function solve_schr_SSFM(x, t, p, ψ_initial, f)
     @unpack k_fft, P_fft, P_ifft = p
 
     dt = t[2] - t[1]
-    dx = x[2] - x[1]
     nt = length(t)
     
     # Potential energy 

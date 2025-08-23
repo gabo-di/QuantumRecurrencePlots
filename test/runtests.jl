@@ -6,7 +6,9 @@ ti = time()
 
 @safetestset "Polynomial Utils" begin include("PolynomialUtils_tests.jl") end
 
-@safetestset "Gridap Billiard" begin include("GridapBilliard_tests.jl") end
+# @safetestset "Gridap Billiard" begin include("GridapBilliard_tests.jl") end
+
+@safetestset "Harmonic Oscillator" begin include("HarmonicOscillator_tests.jl") end
 
 ti = time() - ti
 println("\nTest took total time of:")

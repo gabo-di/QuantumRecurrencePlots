@@ -1,12 +1,10 @@
 using DrWatson
 @quickactivate "QuantumRecurrencePlots"
 using QuantumRecurrencePlots
-using FFTW
 using CairoMakie
 using LinearAlgebra
 using Arpack
 using Gridap
-using Infiltrator
 using Roots
 
 
@@ -69,7 +67,7 @@ function main()
     x_max = sqrt(2*p.ε_x^2 / p.ε_t) * abs(p.α);
 
     # prepare grid 
-    L = 2*4*x_max;  # x_max gives the size scale, L must be greater than this  
+    L = 2*8*x_max;  # x_max gives the size scale, L must be greater than this  
 
     p_gridap = (
         L = L,
@@ -161,7 +159,7 @@ function main_()
     x_max = sqrt(2*p.ε_x^2 / p.ε_t) * abs(p.α)
 
     # prepare grid 
-    L = 2*4*x_max  # x_max gives the size scale, L must be greater than this  
+    L = 2*8*x_max  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N)
 
     # prepare parameters for FFT
@@ -178,7 +176,7 @@ function main_()
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, ψ_initial, f)
+    ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
     
 
     # Compute analytical solution at final time
@@ -215,8 +213,6 @@ function main_1()
     p = make_ε_x(p)
     p = make_ε_t(p)
     p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p)
-
-
 
 end
 
@@ -260,7 +256,7 @@ function main__()
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f)
 
     psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, n, p)
     
