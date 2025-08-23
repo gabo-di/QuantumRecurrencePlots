@@ -33,6 +33,8 @@ function kineticEnergy(k_fft, p)
     return 1/2 * ε_x ^ 2 /ε_t * k_fft^2
 end
 
+
+
 #####################################
 # Adimensional Schrodinger Equation # 
 #####################################
@@ -249,7 +251,7 @@ end
 ###################################
 
 """
-    ψ = coherent_state_1D(x, t, p)
+    ψ = harmonic_coherent_state_1D(x, t, p)
     
 Analytical solution for a coherent state of a harmonic oscillator on 1D.
 
@@ -260,7 +262,7 @@ Parameters:
     - α: Complex coherent state parameter (α = |α|exp(iφ))
     - π_k: Squared Frequency of the harmonic oscillator
 """
-function coherent_state_1D(x, t, p)
+function harmonic_coherent_state_1D(x, t, p)
     @unpack α, π_k, ε_x, ε_t = p
     ω = sqrt(π_k)
 
@@ -282,7 +284,7 @@ function coherent_state_1D(x, t, p)
     return prefactor .* gaussian .* phase
 end
 
-function eigen_state_sum_1D(x, t, c, p)
+function harmonic_eigen_state_sum_1D(x, t, c, p)
     @unpack π_k, ε_x, ε_t = p
     ω = sqrt(π_k)
 
@@ -308,16 +310,16 @@ function eigen_state_sum_1D(x, t, c, p)
     return prefactor .* ss .* gaussian 
 end
 
-function eigen_state_1D(x, t, n, p)
+function harmonic_eigen_state_1D(x, t, n, p)
     # note eigen state is n = 0 1 2 3 so need to add 1 
     c = zeros(n+1)
     c[end] = 1
-    eigen_state_sum_1D(x, t, c, p)
+    harmonic_eigen_state_sum_1D(x, t, c, p)
 end
 
 function make_harmonicPotential_π_k(p)
-    @unpack m, T_0, L_0, k = p   
-    π_k = k/m * T_0^2
+    @unpack m, T_0, L_0, k_2 = p   
+    π_k = k_2/m * T_0^2
 
     p_ = Dict{Symbol,Any}()
     @pack! p_ = π_k 
@@ -340,7 +342,7 @@ end
 # For Quantum Free Particle #
 #############################
 
-function gaussian_state_1D(x, t, p)
+function free_gaussian_state_1D(x, t, p)
     @unpack x_0, v_0, π_σ², ε_x, ε_t = p
 
     # Width parameter
@@ -371,4 +373,55 @@ function make_freeParticle_pars(p)
     p_ = Dict{Symbol,Any}()
     @pack! p_ = π_σ² 
     return merge(p,p_)
+end
+
+#################################
+# For Quantum Quartic Potential #
+#################################
+
+function quarticPotential(x, p)
+    @unpack E_0, L_0, k_4, ε_t = p   
+    π_k_4 = k_4 * L_0^4 / (E_0 * ε_t)  
+    return 1/4 * π_k_4 * x^4
+end
+
+
+
+
+####################
+# Linear regresion #
+####################
+# this comes from https://github.com/st--/LinearRegression.jl/tree/main  with the idea to optimze parts of it
+# important is to note this post https://discourse.julialang.org/t/efficient-way-of-doing-linear-regression/31232/33 where they discuss the use of svd(X) \ y and consider tolerances
+# see more here https://github.com/JuliaLang/LinearAlgebra.jl/pull/1387/files
+
+function _append_bias_column(X)
+    # avoids any conversions at this point
+    ones_column = ones(eltype(X), size(X, 1))
+    return [ones_column X]
+end
+
+function linregress(X, y, weights=nothing) 
+    # Currently assumes that, if `X` is a Matrix, that `size(X) == (length(y),num_coefs)` (i.e., each row describes the features for one observation).
+
+    size(X, 1) == size(y, 1) || throw(DimensionMismatch("size of X and y does not match in first dimension"))
+    X = _append_bias_column(X)
+    coeffs = if weights === nothing
+        _lin_solve( X, y)
+    else
+        length(weights) == size(y, 1) || throw(DimensionMismatch("size of y and weights does not match in first dimension"))
+        W = Diagonal(weights)
+        _lin_solve( X, y, W)
+    end
+    return coeffs
+end
+
+function _lin_solve(X, y, W)
+    # √W X \ √W y
+    Wsqrt = sqrt(W)
+    return _lin_solve(Wsqrt * X, Wsqrt * y)
+end
+
+function _lin_solve( X, y)
+    return X \ y
 end

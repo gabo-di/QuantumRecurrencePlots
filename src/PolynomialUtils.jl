@@ -43,6 +43,11 @@ function (basis::PolyBasis)(x::AbstractArray{T}) where {T}
     return reshape(y, size(x)..., basis.n)
 end
 
+function (basis::PolyBasis)(x::T) where {T<:Number}
+    basis(T[x])
+end
+
+
 function Chebyshev(n::Int)
     # interval [-1 ,1]
     # weight = 1/sqrt(1-x^2)

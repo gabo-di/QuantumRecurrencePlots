@@ -45,7 +45,7 @@ function main()
     p = QuantumRecurrencePlots.makeParsFFT_1D(x, p)
 
     # Generate initial gaussian state
-    ψ_initial = QuantumRecurrencePlots.gaussian_state_1D(x, 0.0, p)
+    ψ_initial = QuantumRecurrencePlots.free_gaussian_state_1D(x, 0.0, p)
 
     # solve in Fourier space
     ψ = copy(ψ_initial)
@@ -61,7 +61,7 @@ function main()
     ψ = p.P_ifft *ψ_k
 
     # Compute analytical solution at final time
-    ψ_analytical = QuantumRecurrencePlots.gaussian_state_1D(x, p.τ, p)
+    ψ_analytical = QuantumRecurrencePlots.free_gaussian_state_1D(x, p.τ, p)
 
     # Generate and save the plot
     fig = Figure(size=(1200, 800))

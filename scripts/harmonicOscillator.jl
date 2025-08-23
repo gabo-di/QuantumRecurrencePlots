@@ -50,7 +50,7 @@ function main()
         T_0 = 1.0,     # Time scale
         ħ = 1.0,       # hbar
         m = 2.0,       # mass of particle
-        k = 1.0,        # harmonic potential mω^2
+        k_2 = 1.0,        # harmonic potential mω^2
         nt = 10000,     # number of time steps 
         τ = 4.22121,    # τ times period of oscillation is the final time
     );
@@ -90,14 +90,14 @@ function main()
     tmax = p.τ*QuantumRecurrencePlots.get_periodHarmonicPotential(p); # Evolve for one full period
     t0 = 0.0 # initial time
     t = LinRange(t0, tmax, p.nt);
-    ψ_initial(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], t0, p);
+    ψ_initial(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], t0, p);
     ψ_0 = get_free_dof_values(interpolate(ψ_initial, V))
 
     # x, ψ_numerical = to_plot_femfunctions(L, V, solve_harmonic_oscillator_MSP(msp, V, t, p, ψ_0), msp.M)
     x, ψ_numerical = to_plot_femfunctions(L, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
 
     # Compute analytical solution at final time
-    ψ_analytical(x) = QuantumRecurrencePlots.coherent_state_1D(x[1], tmax, p)
+    ψ_analytical(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], tmax, p)
     x, ψ_f = to_plot_femfunctions(L, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
 
 
@@ -145,7 +145,7 @@ function main_()
         T_0 = 1.0,     # Time scale
         ħ = 1.0,       # hbar
         m = 2.0,       # mass of particle
-        k = 1.0        # harmonic potential mω^2
+        k_2 = 1.0        # harmonic potential mω^2
     )
 
     # prepare the adimensional parameters, not all scales are independent
@@ -174,7 +174,7 @@ function main_()
     t = LinRange(t0, tmax, p.nt)
 
     # Generate initial coherent state
-    ψ_initial = QuantumRecurrencePlots.coherent_state_1D(x, t0, p)
+    ψ_initial = QuantumRecurrencePlots.harmonic_coherent_state_1D(x, t0, p)
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
@@ -182,7 +182,7 @@ function main_()
     
 
     # Compute analytical solution at final time
-    ψ_analytical = QuantumRecurrencePlots.coherent_state_1D(x, tmax, p)
+    ψ_analytical = QuantumRecurrencePlots.harmonic_coherent_state_1D(x, tmax, p)
 
 
     # Generate and save the plot
@@ -196,6 +196,30 @@ end
 ####################################
 # eigen states harmonic oscillator #
 ####################################
+function main_1()
+    # Set up simulation parameters
+    p = (
+        N = 2048*2,      # Number of grid points (higher for better accuracy)
+        nt = 10000,     # number of time steps 
+        τ = 4.22121,    # τ times period of oscillation is the final time
+        # the following parameters have units
+        L_0 = 1.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
+        T_0 = 1.0,     # Time scale
+        ħ = 1.0,       # hbar
+        m = 2.0,       # mass of particle
+        k_2 = 1.0        # harmonic potential mω^2
+    )
+
+    # prepare the adimensional parameters, not all scales are independent
+    p = make_ε_x(p)
+    p = make_ε_t(p)
+    p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p)
+
+
+
+end
+
 
 # ssfm
 function main__()
@@ -206,7 +230,7 @@ function main__()
         T_0 = 14.0,     # Time scale
         ħ = 12.0,       # hbar
         m = 2.0,       # mass of particle
-        k = 13.0,        # harmonic potential mω^2
+        k_2 = 13.0,        # harmonic potential mω^2
         nt = 10000,     # number of time steps 
         τ = 4.22121,    # τ times period of oscillation is the final time
     );
@@ -232,13 +256,13 @@ function main__()
     t0 = 0.0 # initial time
     t = LinRange(t0, tmax, p.nt)
 
-    psi_0 = QuantumRecurrencePlots.eigen_state_1D(x, t0, n, p);
+    psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, t0, n, p);
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
     psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
 
-    psi_t = QuantumRecurrencePlots.eigen_state_1D(x, tmax, n, p)
+    psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, n, p)
     
     
     # Generate and save the plot
