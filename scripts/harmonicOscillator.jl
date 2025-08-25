@@ -120,7 +120,7 @@ function main()
     #     println("Eigenvalues: ", real.(λ))
     #
     #     # Expected eigenvalues for harmonic oscillator: Eₙ = ω(n + 1/2), n = 0,1,2,...
-    #     expected = p.π_k * (collect(0:9) .+ 0.5)
+    #     expected = p.π_k_2 * (collect(0:9) .+ 0.5)
     #     println("Expected eigenvalues: ", expected)
     #     println("Relative errors: ", abs.(λ .- expected) ./ expected)
     #     
@@ -220,7 +220,7 @@ end
 # ssfm
 function main__()
     p = (
-        N = 512,      # Number of grid points (higher for better accuracy)
+        N = 512*2,      # Number of grid points (higher for better accuracy)
         L_0 = 100.0,    # Length scale
         E_0 = 10.0,     # Energy scale
         T_0 = 14.0,     # Time scale
@@ -240,7 +240,7 @@ function main__()
 
     n = 10; # eigen state
     x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
-    L = 2*x_max/sqrt(sqrt(p.π_k)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
+    L = 4*x_max/sqrt(sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
 

@@ -80,7 +80,7 @@ function solve_schr_SSFM(x, t, p, ψ_initial, f)
     
     # Potential energy 
     V = f.(x) 
-    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
+    # V = 1/2 * π_k_2 * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
     
     # Kinetic energy in Fourier space
     kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
@@ -126,7 +126,7 @@ function solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
     
     # Potential energy 
     V = f.(x) 
-    # V = 1/2 * π_k * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
+    # V = 1/2 * π_k_2 * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
     
     # Kinetic energy in Fourier space
     kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
@@ -259,11 +259,11 @@ Parameters:
 - t: Scalar Time
 - p: parameter container with entries (adimensional units):
     - α: Complex coherent state parameter (α = |α|exp(iφ))
-    - π_k: Squared Frequency of the harmonic oscillator
+    - π_k_2: Squared Frequency of the harmonic oscillator
 """
 function harmonic_coherent_state_1D(x, t, p)
-    @unpack α, π_k, ε_x, ε_t = p
-    ω = sqrt(π_k)
+    @unpack α, π_k_2, ε_x, ε_t = p
+    ω = sqrt(π_k_2)
 
     # Width parameter
     σ² = ε_x^2/(ε_t*ω)
@@ -284,8 +284,8 @@ function harmonic_coherent_state_1D(x, t, p)
 end
 
 function harmonic_eigen_state_sum_1D(x, t, c, p)
-    @unpack π_k, ε_x, ε_t = p
-    ω = sqrt(π_k)
+    @unpack π_k_2, ε_x, ε_t = p
+    ω = sqrt(π_k_2)
 
     # number of eigenstates
     n = length(c)
@@ -318,22 +318,22 @@ end
 
 function make_harmonicPotential_π_k(p)
     @unpack m, T_0, L_0, k_2 = p   
-    π_k = k_2/m * T_0^2
+    π_k_2 = k_2/m * T_0^2
 
     p_ = Dict{Symbol,Any}()
-    @pack! p_ = π_k 
+    @pack! p_ = π_k_2 
     return merge(p,p_)
 end
 
 function get_periodHarmonicPotential(p)
-    @unpack π_k = p
-    w_ = sqrt(π_k)
+    @unpack π_k_2 = p
+    w_ = sqrt(π_k_2)
     return 2pi/w_
 end
 
 function harmonicPotential(x, p)
-    @unpack π_k, ε_x, ε_t = p
-    return 1/2 * π_k * ε_t / ε_x ^ 2 * x^2
+    @unpack π_k_2, ε_x, ε_t = p
+    return 1/2 * π_k_2 * ε_t / ε_x ^ 2 * x^2
 end
 
 
