@@ -4,7 +4,7 @@ using QuantumRecurrencePlots
 using LinearAlgebra
 using Arpack
 using Gridap
-using Roots
+using NonlinearSolve
 using FastGaussQuadrature
 
 @testset "Time Integrators" begin 
@@ -67,7 +67,7 @@ using FastGaussQuadrature
         end
     end
 
-    if false  #skip because takes time
+    if true  #skip because takes time
         @testset "Cranck Nicolson coherent state" begin
             p = (
                 N = 1024*2,      # Number of grid points (higher for better accuracy)
@@ -120,33 +120,11 @@ using FastGaussQuadrature
             ψ_initial(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], t0, p);
             ψ_0 = get_free_dof_values(interpolate(ψ_initial, V))
 
-            function to_plot_femfunctions(x, V, ψ_coeffs, M)
-                # Create a fine grid for plotting
-                n_plot_points = length(x)
-
-                
-                # Normalize eigenfunction
-                ψ_i = ψ_coeffs[:]
-                ψ_i = ψ_i / sqrt(abs(ψ_i' * M * ψ_i))  # Normalize with respect to mass matrix
-               
-                # Create FE function
-                ψ_fem = FEFunction(V, ψ_i)
-               
-                # Evaluate at the plotting points
-                T = ComplexF64
-                ψ_values = zeros(T, n_plot_points)
-                for (j, x) in enumerate(x)
-                    ψ_values[j] = ψ_fem(Gridap.Point(x))
-                end
-               
-                return ψ_values
-            end
-
-            ψ_numerical = to_plot_femfunctions(x, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
+            ψ_numerical = QuantumRecurrencePlots.to_plot_femfunctions_1D(x, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
 
             # Compute analytical solution at final time
             ψ_analytical(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], tmax, p)
-            ψ_f = to_plot_femfunctions(x, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
+            ψ_f = QuantumRecurrencePlots.to_plot_femfunctions_1D(x, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
 
 
             @test isapprox(norm(ψ_numerical - ψ_f)/norm(ψ_f), 0; atol=1e-5)
@@ -173,8 +151,11 @@ using FastGaussQuadrature
 
         # now consider all adimensional variables
 
-        n = 10; # eigen state
-        x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
+        pp = (n = 10, tol=1e-4); # eigen state for size of grid
+        u0 = sqrt(pp.n*2 -1); # initial guess
+        f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+        prob = NonlinearProblem(f_to_opt, u0, pp)
+        x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
         L = 4*x_max/sqrt(sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
         x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
@@ -187,12 +168,12 @@ using FastGaussQuadrature
         t0 = 0.0 # initial time
         t = LinRange(t0, tmax, p.nt)
 
-        psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, t0, n, p);
+        psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, t0, pp.n, p);
 
         # Solve using split-step Fourier method
         f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
 
-        psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, n, p)
+        psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, pp.n, p)
         @testset "Second Order Method" begin
             psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
             @test isapprox(norm(psi_n - psi_t)/norm(psi_t), 0; atol=1e-4)
@@ -224,8 +205,11 @@ using FastGaussQuadrature
 
         # now consider all adimensional variables
 
-        n = 6; # eigen state
-        x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
+        pp = (n = 10, tol=1e-4); # eigen state for size of grid
+        u0 = sqrt(pp.n*2 -1); # initial guess
+        f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+        prob = NonlinearProblem(f_to_opt, u0, pp)
+        x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
         L = 4*x_max/sqrt(sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
         x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
@@ -288,8 +272,11 @@ end
 
     # now consider all adimensional variables
 
-    n = 6; # eigen state for size of grid
-    x_max = fzero(x->exp(-x^2/2)*x^(n) - 0.001, sqrt(2*n-1));
+    pp = (n = 10, tol=1e-4); # eigen state for size of grid
+    u0 = sqrt(pp.n*2 -1); # initial guess
+    f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+    prob = NonlinearProblem(f_to_opt, u0, pp)
+    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
     L = 4*x_max/sqrt(p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
@@ -301,6 +288,5 @@ end
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p);
     msp = MSP_matrix_1D(x_h, w_h, a, f);
     H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t; # we reescale the stiffnes matrix with the adimensional parameters 
-    λ, ψ_coeffs = eigs(H, msp.M; nev=n-2, which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
-
+    λ, ψ_coeffs = eigs(H, msp.M; nev=pp.n-2, which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
 end

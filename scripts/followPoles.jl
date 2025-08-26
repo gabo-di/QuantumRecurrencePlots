@@ -4,10 +4,10 @@ using QuantumRecurrencePlots
 using FFTW
 using CairoMakie
 using LinearAlgebra
-using Roots
 using Infiltrator
 using Gridap
 using FastGaussQuadrature
+using NonlinearSolve
 
 # harmonic oscillator
 function main()
@@ -30,8 +30,11 @@ function main()
 
     # now consider all adimensional variables
 
-    n = 10; # eigen state for size of grid
-    x_max = fzero(x->exp(-x^2/2)*x^(n) - 0.001, sqrt(2*n-1));
+    pp = (n = 10, tol=1e-4); # eigen state for size of grid
+    u0 = sqrt(pp.n*2 -1); # initial guess
+    f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+    prob = NonlinearProblem(f_to_opt, u0, pp)
+    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
     L = 4*x_max/sqrt(sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
@@ -97,8 +100,11 @@ function main_()
 
     # now consider all adimensional variables
 
-    n = 6; # eigen state for size of grid
-    x_max = fzero(x->exp(-x^2/2)*x^(n) - 0.001, sqrt(2*n-1));
+    pp = (n = 10, tol=1e-4); # eigen state for size of grid
+    u0 = sqrt(pp.n*2 -1); # initial guess
+    f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+    prob = NonlinearProblem(f_to_opt, u0, pp)
+    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
     L = 2*x_max/sqrt(p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 

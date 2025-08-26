@@ -211,35 +211,38 @@ end
 # For Circular Billiard #
 #########################
 
-jprime(ν,x) = 0.5*(besselj(ν - 1, x) - besselj(ν + 1, x))
+jprime(x,ν) = 0.5*(besselj(ν - 1, x) - besselj(ν + 1, x))
 
 function besseljprime_zeros(ν::Real, N::Int; step = 0.5, atol = 1e-12)
     ν ≥ 0 || error("Order ν must be ≥ 0")
     roots = Float64[]
     xL    = 1e-6              # skip trivial x=0 only for ν=0
-    fL    = jprime(ν, xL)
+    fL    = jprime(xL, ν)
+    prob = IntervalNonlinearProblem(jprime, (xL, xL+step), ν)
 
     while length(roots) < N
         # march to the right until the sign changes
         xR = xL + step
-        fR = jprime(ν, xR)
+        fR = jprime(xR, ν)
 
         # enlarge step adaptively if fL and fR have same sign too often
         tries = 0
         while sign(fL) == sign(fR)
             xL, xR = xR, xR + step
-            fL, fR = fR, jprime(ν, xR)
+            fL, fR = fR, jprime(xR, ν)
             tries += 1
             tries < 50 || error("Unable to bracket next root — increase `step`")
         end
 
         # bracket found -> Brent
-        root = find_zero((x)-> jprime(ν,x), (xL,xR), Order1(), atol=atol)
+        # root = find_zero((x)-> jprime(x, ν), (xL,xR), Order1(), atol=atol)
+        root = NonlinearSolve.solve(remake(prob, tspan=(xL, xR)), ITP(); abstol = atol)[1]
+
         push!(roots, root)
 
 
         # prepare next iteration
-        xL, fL = root, jprime(ν, root + eps())   # move off the root slightly
+        xL, fL = root, jprime(root + eps(), ν)   # move off the root slightly
     end
     return roots
 end

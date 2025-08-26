@@ -5,36 +5,8 @@ using CairoMakie
 using LinearAlgebra
 using Arpack
 using Gridap
-using Roots
+using NonlinearSolve
 
-
-#########
-# utils #
-#########
-
-function to_plot_femfunctions(L, V, ψ_coeffs, M)
-    # Create a fine grid for plotting
-    n_plot_points = 1000
-    x_plot = range(-L, L, length=n_plot_points)
-
-    
-    # Normalize eigenfunction
-    ψ_i = ψ_coeffs[:]
-    ψ_i = ψ_i / sqrt(abs(ψ_i' * M * ψ_i))  # Normalize with respect to mass matrix
-   
-    # Create FE function
-    ψ_fem = FEFunction(V, ψ_i)
-   
-    # Evaluate at the plotting points
-    T = ComplexF64
-    ψ_values = zeros(T, n_plot_points)
-    for (j, x) in enumerate(x_plot)
-        ψ_values[j] = ψ_fem(Gridap.Point(x))
-    end
-   
-   
-    return x_plot, ψ_values
-end
 
 ######################################
 # coherent state harmonic oscillator #
@@ -68,6 +40,7 @@ function main()
 
     # prepare grid 
     L = 2*8*x_max;  # x_max gives the size scale, L must be greater than this  
+    x = LinRange(-L/2, L/2 - L/p.N, p.N)
 
     p_gridap = (
         L = L,
@@ -91,12 +64,11 @@ function main()
     ψ_initial(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], t0, p);
     ψ_0 = get_free_dof_values(interpolate(ψ_initial, V))
 
-    # x, ψ_numerical = to_plot_femfunctions(L, V, solve_harmonic_oscillator_MSP(msp, V, t, p, ψ_0), msp.M)
-    x, ψ_numerical = to_plot_femfunctions(L, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
+    ψ_numerical = QuantumRecurrencePlots.to_plot_femfunctions_1D(x, V, QuantumRecurrencePlots.solve_schr_CrNi(msp, t, p, ψ_0), msp.M)
 
     # Compute analytical solution at final time
     ψ_analytical(x) = QuantumRecurrencePlots.harmonic_coherent_state_1D(x[1], tmax, p)
-    x, ψ_f = to_plot_femfunctions(L, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
+    ψ_f = QuantumRecurrencePlots.to_plot_femfunctions_1D(x, V,  get_free_dof_values(interpolate(ψ_analytical, V)), msp.M)
 
 
     # Generate and save the plot
@@ -238,8 +210,11 @@ function main__()
 
     # now consider all adimensional variables
 
-    n = 10; # eigen state
-    x_max = fzero(x->exp(-x^2/2)*x^n - 0.001, sqrt(2*n-1));
+    pp = (n = 10, tol=1e-4); # eigen state for size of grid
+    u0 = sqrt(pp.n*2 -1); # initial guess
+    f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
+    prob = NonlinearProblem(f_to_opt, u0, pp)
+    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
     L = 4*x_max/sqrt(sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 

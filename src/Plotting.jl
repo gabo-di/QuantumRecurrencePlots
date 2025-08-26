@@ -42,3 +42,26 @@ function plot_comparison_1D!(fig, x, tmax, ψ_numerical, ψ_analytical)
     return nothing
     # return fig
 end
+
+
+function to_plot_femfunctions_1D(x, V, ψ_coeffs, M)
+    # Create a fine grid for plotting
+    n_plot_points = length(x)
+
+    
+    # Normalize eigenfunction
+    ψ_i = ψ_coeffs[:]
+    ψ_i = ψ_i / sqrt(abs(ψ_i' * M * ψ_i))  # Normalize with respect to mass matrix
+   
+    # Create FE function
+    ψ_fem = FEFunction(V, ψ_i)
+   
+    # Evaluate at the plotting points
+    T = eltype(ψ_coeffs) 
+    ψ_values = zeros(T, n_plot_points)
+    for (j, x) in enumerate(x)
+        ψ_values[j] = ψ_fem(Gridap.Point(x))
+    end
+   
+    return ψ_values
+end

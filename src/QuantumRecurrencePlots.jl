@@ -10,7 +10,8 @@ using Gmsh
 using Gridap, GridapGmsh
 using FastGaussQuadrature
 using SpecialFunctions
-using Roots
+using NonlinearSolve
+using LinearSolve
 
 
 # ---- includes ----
