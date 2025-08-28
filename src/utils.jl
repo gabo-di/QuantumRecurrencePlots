@@ -71,7 +71,7 @@ end
 ####################
 # Time integration #
 ####################
-function solve_schr_SSFM(x, t, p, ψ_initial, f)
+function solve_schr_SSFM(x, t, p, ψ_initial, f, kin)
     @unpack ε_x, ε_t = p
     @unpack k_fft, P_fft, P_ifft = p
 
@@ -83,7 +83,6 @@ function solve_schr_SSFM(x, t, p, ψ_initial, f)
     # V = 1/2 * π_k_2 * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
     
     # Kinetic energy in Fourier space
-    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
     T = kin.(k_fft)
     # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
     
@@ -116,7 +115,7 @@ function solve_schr_SSFM(x, t, p, ψ_initial, f)
     return ψ
 end
 
-function solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
+function solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f, kin)
     @unpack ε_x, ε_t = p
     @unpack k_fft, P_fft, P_ifft = p
 
@@ -129,7 +128,6 @@ function solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
     # V = 1/2 * π_k_2 * ε_t / ε_x ^ 2 .* x.^2 (harmonic oscillator)
     
     # Kinetic energy in Fourier space
-    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
     T = kin.(k_fft)
     # T = ε_x ^ 2 /(2* ε_t) .* k_fft.^2
     

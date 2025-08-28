@@ -77,29 +77,6 @@ function main()
 
     # Display the figure if running interactively
     display(fig)
-
-    # Eigen system
-    # begin
-    #     @unpack M, S, P = msp 
-    #     H = P + S * 1/2 * p.ε_x ^ 2 /p.ε_t # we reescale the stiffnes matrix with the adimensional parameters 
-    #
-    #
-    #     # Solve the eigenvalue problem using Arpack
-    #
-    #     println("Solving eigenvalue problem...")
-    #     λ, ψ_coeffs = eigs(H, M; nev=10, which=:LR, sigma=1e-6, tol=1e-5, maxiter=1000)
-    #     # λ, ψ_coeffs = eigs(H, M; nev=10, which=:SM, tol=1e-5, maxiter=1000)
-    #     println("Eigenvalues: ", real.(λ))
-    #
-    #     # Expected eigenvalues for harmonic oscillator: Eₙ = ω(n + 1/2), n = 0,1,2,...
-    #     expected = p.π_k_2 * (collect(0:9) .+ 0.5)
-    #     println("Expected eigenvalues: ", expected)
-    #     println("Relative errors: ", abs.(λ .- expected) ./ expected)
-    #     
-    #     # Plot the first few eigenfunctions
-    #     p = plot_femfunctions(L, V, ψ_coeffs[:,2], msp.M)
-    #     display(p)
-    # end
 end
 
 # ssfm
@@ -148,7 +125,9 @@ function main_()
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
+
+    ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f, kin)
     
 
     # Compute analytical solution at final time
@@ -231,9 +210,11 @@ function main__()
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f)
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
 
-    psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, n, p)
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f, kin)
+
+    psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, pp.n, p)
     
     
     # Generate and save the plot

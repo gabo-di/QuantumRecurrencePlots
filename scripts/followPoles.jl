@@ -54,7 +54,9 @@ function main()
 
     # Solve using split-step Fourier method
     f(x) = QuantumRecurrencePlots.harmonicPotential(x, p);
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f);
+    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p);
+
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f, kin);
 
     psi_t = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, c, p);
     # psi_t .= psi_t / sqrt(sum(abs2.(psi_t)));

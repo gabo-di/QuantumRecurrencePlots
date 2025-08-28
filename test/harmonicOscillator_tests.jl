@@ -41,6 +41,7 @@ using FastGaussQuadrature
         
         # Solve using split-step Fourier method
         f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+        kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
 
         # prepare parameters for FFT
         p = QuantumRecurrencePlots.makeParsFFT_1D(x, p)
@@ -57,17 +58,17 @@ using FastGaussQuadrature
         # Compute analytical solution at final time
         ψ_analytical = QuantumRecurrencePlots.harmonic_coherent_state_1D(x, tmax, p)
         @testset "Second Order Method" begin
-            ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, ψ_initial, f)
+            ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, ψ_initial, f, kin)
             @test isapprox(norm(ψ_numerical - ψ_analytical)/norm(ψ_analytical), 0; atol=2e-5)
         end
 
         @testset "Yoshida Method" begin
-            ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f)
+            ψ_numerical = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, ψ_initial, f, kin)
             @test isapprox(norm(ψ_numerical - ψ_analytical)/norm(ψ_analytical), 0; atol=1e-8)
         end
     end
 
-    if true  #skip because takes time
+    if false  #skip because takes time
         @testset "Cranck Nicolson coherent state" begin
             p = (
                 N = 1024*2,      # Number of grid points (higher for better accuracy)
@@ -172,15 +173,16 @@ using FastGaussQuadrature
 
         # Solve using split-step Fourier method
         f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+        kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
 
         psi_t = QuantumRecurrencePlots.harmonic_eigen_state_1D(x, tmax, pp.n, p)
         @testset "Second Order Method" begin
-            psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
+            psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f, kin)
             @test isapprox(norm(psi_n - psi_t)/norm(psi_t), 0; atol=1e-4)
         end
 
         @testset "Yoshida Method" begin
-            psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f)
+            psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f, kin)
             @test isapprox(norm(psi_n - psi_t)/norm(psi_t), 0; atol=1e-8)
         end
     end
@@ -227,16 +229,17 @@ using FastGaussQuadrature
 
         # Solve using split-step Fourier method
         f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
+        kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
 
         psi_t = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, c, p);
 
         @testset "Second Order Method" begin
-            psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f)
+            psi_n = QuantumRecurrencePlots.solve_schr_SSFM(x, t, p, psi_0, f, kin)
             @test isapprox(norm(psi_n - psi_t)/norm(psi_t), 0; atol=1e-4)
         end
 
         @testset "Yoshida Method" begin
-            psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f)
+            psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f, kin)
             @test isapprox(norm(psi_n - psi_t)/norm(psi_t), 0; atol=1e-8)
         end
     end

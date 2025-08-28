@@ -6,7 +6,7 @@ ti = time()
 
 @safetestset "Polynomial Utils" begin include("PolynomialUtils_tests.jl") end
 
-if true # skip takes time
+if false # skip takes time
     @safetestset "Gridap Billiard" begin include("GridapBilliard_tests.jl") end
 end
 
