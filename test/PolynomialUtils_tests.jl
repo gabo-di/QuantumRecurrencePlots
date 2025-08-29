@@ -14,18 +14,21 @@ using LinearAlgebra
         A = V' * Diagonal(w) * V;
         B = Diagonal([a.f_norm(i,i) for i in 0:(n-1)]);
         @test isapprox(A, B, atol=1e-10)
-        
-        # coef = ((V' * Diagonal(w) * f.(x)) ./ ([a.f_norm(i,i) for i in 0:(n-1)]))
-        # f(x) = exp(-x^2/2);
-        # df(x) = -x*exp(-x^2/2);
-        # m = 20;
-        # x, w = gausshermite(m, normalize=true);
-        # a = Hermite(m);
-        # V = a(x);
-        # A = derivative_polybasis(a);
-        # dfx1 = (V' * Diagonal(w) * df.(x)) ./ ([a.f_norm(i,i) for i in 0:(m-1)]);
-        # dfx2 = A * ((V' * Diagonal(w) * f.(x)) ./ ([a.f_norm(i,i) for i in 0:(m-1)]));
-        # @test isapprox(dfx1, dfx2, atol=1e-6)
+    end
+
+    @testset "Gauss Hermite derivative" begin
+        f(x) = cos(-x^2/2)*exp(-x^2/2); 
+        df(x) = x*(sin(-x^2/2) - cos(-x^2/2))*exp(-x^2/2);
+        m = 32;
+        x, w = gausshermite(m, normalize=true);
+        a = Hermite(m);
+        V = a(x);
+        A = QuantumRecurrencePlots.derivative_polybasis(a);
+
+        # for this function does not work a.f_norm because we need m>20 so use diag(V' * Diagonal(w) * V)
+        dfx1 = (V' * Diagonal(w) * df.(x)) ./ ([a.f_norm(i,i) for i in 0:(m-1)]);
+        dfx2 = A * ((V' * Diagonal(w) * f.(x)) ./  ([a.f_norm(i,i) for i in 0:(m-1)]));
+        @test isapprox(dfx1, dfx2, atol=1e-7)
     end
 
     @testset "Gauss Laguerre" begin
@@ -62,6 +65,21 @@ using LinearAlgebra
         A = V' * Diagonal(w) * V;
         B = Diagonal([a.f_norm(i,i) for i in 0:(n-1)]);
         @test isapprox(A, B, atol=1e-10)
+    end
+
+    @testset "Gauss Hermite_hat derivative" begin
+        f(x) = cos(-x^2/2)*exp(-x^2/2); 
+        df(x) = x*(sin(-x^2/2) - cos(-x^2/2))*exp(-x^2/2);
+        m = 90; # note that we need much more terms to achieve the same convergence as Hermite 
+        x, w = gausshermite(m, normalize=true);
+        a = Hermite_hat(m);
+        V = a(x);
+        A = QuantumRecurrencePlots.derivative_polybasis(a);
+
+        dfx1 = (V' * Diagonal(w) * df.(x));
+        dfx2 = A * ((V' * Diagonal(w) * f.(x)));
+        maximum(abs.(dfx1 - dfx2))
+        @test isapprox(dfx1, dfx2, atol=1e-8)
     end
 end
 

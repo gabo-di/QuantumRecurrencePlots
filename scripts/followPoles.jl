@@ -8,6 +8,8 @@ using Infiltrator
 using Gridap
 using FastGaussQuadrature
 using NonlinearSolve
+using Arpack
+using NonlinearSolveHomotopyContinuation
 
 # harmonic oscillator
 function main()
@@ -72,13 +74,24 @@ function main()
     n_h = 100;
     m_h = 100;
     x_h, w_h = gausshermite(n_h, normalize=true);
-    a = QuantumRecurrencePlots.Hermite_hat(m_h);
+    # a = QuantumRecurrencePlots.Hermite_hat(m_h);
+    a = QuantumRecurrencePlots.Hermite(m_h);
 
-    α = sqrt(2*sqrt(p.π_k_2)*p.ε_t/p.ε_x^2);
+    α = QuantumRecurrencePlots._harmonicPotential_xscale(p);
     f_(x) = QuantumRecurrencePlots.harmonicPotential(x, p)/α^2;
     msp = MSP_matrix_1D(x_h, w_h, a, f_);
     H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t * α^2; # we reescale the stiffnes matrix with the adimensional parameters 
-    λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int, m_h/3), which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
+    # λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int, m_h/3), which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
+    λ, ψ_coeffs = eigen(H, msp.M); # note that arpack gives awfull results when M is not the identity 
+    fig = Figure(size=(800, 800))
+    ax = Axis(fig[1,1])
+    n_eigs = round(Int, m_h/3)
+    for i in 1:10 #axes(ψ_coeffs, 2) 
+        lines!(ax, (range(1,n_eigs)), log10.(abs2.(ψ_coeffs[1:n_eigs,i])), label="$(i-1) eigenstate")
+    end
+    axislegend(ax, position=:rt)
+
+    display(fig)
     return λ, ψ_coeffs, msp, p
 end
 
@@ -86,19 +99,20 @@ end
 function main_()
     p = (
         N = 1024,      # Number of grid points (higher for better accuracy)
-        L_0 = 1.0,    # Length scale
-        E_0 = 1.0,     # Energy scale
-        T_0 = 1.0,     # Time scale
-        ħ = 2.0,       # hbar
-        m = 1.0,       # mass of particle
-        k_4 = 3.0,        # quartic potential
-        nt = 100,     # number of time steps 
-        τ = 0.3,    # τ times period of oscillation is the final time
+        nt = 10000,     # number of time steps 
+        L_0 = 100.0,    # Length scale
+        E_0 = 10.0,     # Energy scale
+        T_0 = 14.0,     # Time scale
+        ħ = 12.0,       # hbar
+        m = 2.0,       # mass of particle
+        k_4 = 13.0,        # harmonic potential mω^2
+        τ = 4.22121,    # τ times period of oscillation is the final time
     );
-    #
+
     # prepare the adimensional parameters, not all scales are independent
     p = make_ε_x(p);
     p = make_ε_t(p);
+    p = QuantumRecurrencePlots.make_quarticPotential_π_k(p);
 
     # now consider all adimensional variables
 
@@ -107,39 +121,49 @@ function main_()
     f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
     prob = NonlinearProblem(f_to_opt, u0, pp)
     x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
-    L = 2*x_max/sqrt(p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
+    L = 4*x_max/sqrt(p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
     x = LinRange(-L/2, L/2 - L/p.N, p.N);
 
 
     n_h = 100;
     m_h = 100;
     x_h, w_h = gausshermite(n_h, normalize=true);
-    a = QuantumRecurrencePlots.Hermite_hat(m_h);
+    a = QuantumRecurrencePlots.Hermite(m_h);
 
-    f(x) = QuantumRecurrencePlots.quarticPotential(x, p);
-    msp = MSP_matrix_1D(x_h, w_h, a, f);
-    H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t; # we reescale the stiffnes matrix with the adimensional parameters 
-    λ, ψ_coeffs = eigs(H, msp.M; nev=n-2, which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
+    α = QuantumRecurrencePlots._quarticPotential_xscale(p) 
+    f_(x) = QuantumRecurrencePlots.quarticPotential(x, p)/α^4;
+    msp = MSP_matrix_1D(x_h, w_h, a, f_);
+    H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t * α^2; # we reescale the stiffnes matrix with the adimensional parameters 
+    # λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int, m_h/3), which=:LR,check=1,maxiter=10000,tol=1e-8, sigma=1e-3); # smallest
+    λ, ψ_coeffs = eigen(H, msp.M); # note that arpack gives awfull results when M is not the identity 
     
-    # # evaluate solution on grid
-    # psi = zeros(T, p.N, size(ψ_coeffs,2)) 
-    # for i in axes(ψ_coeffs, 2) 
-    #     psi_fun_n = FEFunction(V, ψ_coeffs[:,i])
-    #     for j in eachindex(x) 
-    #         psi[j,i] = psi_fun_n(Gridap.Point(x[j]))
-    #     end
-    #     psi[:,i] .= psi[:,i] ./ sum(abs2.(psi[:,i]))
-    # end
-    #
     fig = Figure(size=(800, 800))
     ax = Axis(fig[1,1])
-    for i in axes(ψ_coeffs, 2) 
-        lines!(ax, (range(1,size(ψ_coeffs,1))), log10.(abs2.(ψ_coeffs[:,i])), label="$(i-1) eigenstate")
+    n_eigs = 10#round(Int, m_h/3)
+    for i in 1:10 #axes(ψ_coeffs, 2) 
+        nn = norm(ψ_coeffs[:,i])
+        lines!(ax, (range(1,n_eigs)), log10.(abs2.(ψ_coeffs[1:n_eigs,i]./nn)), label="$(i-1) eigenstate")
     end
     axislegend(ax, position=:rt)
 
     display(fig)
-    println(p)
-    return λ, ψ_coeffs, msp
+    return λ, ψ_coeffs, msp, p
 end
  
+
+function main_1()
+    alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
+    rhs = function (u, p)
+        return u * u - p[1] * u + p[2]
+    end
+    jac = function (u, p)
+        return 2u - p[1]
+    end
+    fn = NonlinearFunction(rhs; jac)
+    prob = NonlinearProblem(fn, 1.0 + im, [5.0, 6.0])
+    f, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(prob, alg)
+    orig_sol = HC.solve(hcsys; alg.kwargs...)
+    allsols = HC.solutions(orig_sol)
+    
+
+end

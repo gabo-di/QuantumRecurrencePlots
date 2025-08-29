@@ -48,7 +48,7 @@ function (basis::PolyBasis)(x::T) where {T<:Number}
 end
 
 
-function Chebyshev(n::Int)
+function Chebyshev(n::Int, T::Type{<:AbstractFloat}=Float64) 
     # interval [-1 ,1]
     # weight = 1/sqrt(1-x^2)
     # ortogonality = π/2 kronecker(n,m)  or π if n = m = 0
@@ -72,16 +72,16 @@ function Chebyshev(n::Int)
     end
     function f_norm(n::Int,m::Int)
         if n==m==0
-            return pi
+            return T(pi)
         else
-            return pi/2*kronecker(n,m)
+            return T(pi/2*kronecker(n,m))
         end
     end
 
     PolyBasis{:chebyshev, typeof(f0), typeof(f1), typeof(a0), typeof(a1), typeof(a2), typeof(f_weight), typeof(f_norm)}(n, f0, f1, a0, a1, a2, f_weight, f_norm)
 end
 
-function Legendre(n::Int)
+function Legendre(n::Int, T::Type{<:AbstractFloat}=Float64) 
     # interval [-1 ,1]
     # weight = 1
     # ortogonality = 2/(2*n+1) kronecker(n,m)
@@ -104,13 +104,13 @@ function Legendre(n::Int)
         1
     end
     function f_norm(n::Int,m::Int)
-        2/(2*n+1)*kronecker(n,m)
+        T(2/(2*n+1)*kronecker(n,m))
     end
 
     PolyBasis{:legendre, typeof(f0), typeof(f1), typeof(a0), typeof(a1), typeof(a2), typeof(f_weight), typeof(f_norm)}(n, f0, f1, a0, a1, a2, f_weight, f_norm)
 end
 
-function Laguerre(n::Int)
+function Laguerre(n::Int, T::Type{<:AbstractFloat}=Float64)
     # interval [0, ∞)
     # weight = exp(-x)
     # ortogonality = kronecker(n,m)
@@ -133,13 +133,13 @@ function Laguerre(n::Int)
         return exp(-x)
     end
     function f_norm(n::Int, m::Int)
-        kronecker(n,m)
+        T(kronecker(n,m))
     end
 
     PolyBasis{:laguerre, typeof(f0), typeof(f1), typeof(a0), typeof(a1), typeof(a2), typeof(f_weight), typeof(f_norm)}(n, f0, f1, a0, a1, a2, f_weight, f_norm)
 end
 
-function Hermite(n::Int)
+function Hermite(n::Int; T::Type{<:AbstractFloat}=Float64) 
     # Probabilist's Hermite polynomials
     # interval (-∞, ∞)
     # weight = exp(-x^2 / 2)
@@ -163,7 +163,11 @@ function Hermite(n::Int)
         exp(-x^2/2)/sqrt(2pi)
     end
     function f_norm(n::Int, m::Int)
-        kronecker(n,m) * factorial(n) 
+        if n <= 20 
+            T(kronecker(n,m) * factorial(n))
+        else # correction for big numbers
+            T(kronecker(n,m) * gamma(n+1))
+        end
     end
 
     PolyBasis{:hermite, typeof(f0), typeof(f1), typeof(a0), typeof(a1), typeof(a2), typeof(f_weight), typeof(f_norm)}(n, f0, f1, a0, a1, a2, f_weight, f_norm)
@@ -174,7 +178,7 @@ function derivative_polybasis(a::PolyBasis{:hermite})
     diagm(1 =>[i for i in 1:(a.n-1)])
 end
 
-function Hermite_hat(n::Int)
+function Hermite_hat(n::Int; T::Type{<:AbstractFloat}=Float64)
     # Normailzed Probabilist's Hermite polynomials
     # interval (-∞, ∞)
     # weight = exp(-x^2 / 2)
@@ -198,8 +202,13 @@ function Hermite_hat(n::Int)
         exp(-x^2/2)/sqrt(2pi)
     end
     function f_norm(n::Int, m::Int)
-        kronecker(n,m) 
+        T(kronecker(n,m))
     end
 
     PolyBasis{:hermite_hat, typeof(f0), typeof(f1), typeof(a0), typeof(a1), typeof(a2), typeof(f_weight), typeof(f_norm)}(n, f0, f1, a0, a1, a2, f_weight, f_norm)
+end
+
+function derivative_polybasis(a::PolyBasis{:hermite_hat})
+    # Bidiagonal(A, :U)
+    diagm(1 =>[sqrt(i) for i in 1:(a.n-1)])
 end

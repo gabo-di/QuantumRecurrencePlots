@@ -1,7 +1,6 @@
 #################
 # General Stuff #
 #################
-
 """
     δ = kronecker(n::Int, m::Int)
 
@@ -375,14 +374,42 @@ function make_freeParticle_pars(p)
     return merge(p,p_)
 end
 
+function _harmonicPotential_xscale(p)
+    # divide x by this number and potential behaves well, multiply by this to recover actual x
+    sqrt(2*sqrt(p.π_k_2)*p.ε_t/p.ε_x^2); #note the sqrt(2) makes better approx because H is diagonal 
+end
+
+function _harmonicPotential_Escale(p)
+    # divide E by this number and eigenenergies are the same
+    sqrt(p.π_k_2)
+end
+
 #################################
 # For Quantum Quartic Potential #
 #################################
 
+function make_quarticPotential_π_k(p)
+    @unpack m, T_0, L_0, k_4 = p   
+    π_k_4 = k_4/m * T_0^2 * L_0^2
+
+    p_ = Dict{Symbol,Any}()
+    @pack! p_ = π_k_4 
+    return merge(p,p_)
+end
+
 function quarticPotential(x, p)
-    @unpack E_0, L_0, k_4, ε_t = p   
-    π_k_4 = k_4 * L_0^4 / (E_0 * ε_t)  
-    return 1/4 * π_k_4 * x^4
+    @unpack π_k_4, ε_x, ε_t = p
+    return 1/2 * π_k_4 * ε_t / ε_x ^ 2 * x^4
+end
+
+function _quarticPotential_xscale(p)
+    # divide x by this number and potential behaves well, multiply by this to recover actual x
+    cbrt(sqrt(24* p.π_k_4)*p.ε_t/p.ε_x^2); # the 24 improves the result on the first eigenvectors
+end
+
+function _quarticPotential_Escale(p)
+    # divide E by this number and eigenenergies are the same
+    (sqrt(p.π_k_4) / _quarticPotential_xscale(p))
 end
 
 

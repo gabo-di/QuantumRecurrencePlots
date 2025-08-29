@@ -3,7 +3,6 @@ using DrWatson
 using QuantumRecurrencePlots
 using LinearAlgebra
 using Arpack
-using Gridap
 using NonlinearSolve
 using FastGaussQuadrature
 
@@ -258,38 +257,24 @@ end
         τ = 4.22121,    # τ times period of oscillation is the final time
     );
 
-    p = (
-        N = 1024,      # Number of grid points (higher for better accuracy)
-        nt = 10000,     # number of time steps 
-        L_0 = 100.0,    # Length scale
-        E_0 = 10.0,     # Energy scale
-        T_0 = 1.0,     # Time scale
-        ħ = 1.0,       # hbar
-        m = 1.0,       # mass of particle
-        k_2 = 1.0,        # harmonic potential mω^2
-        τ = 4.22121,    # τ times period of oscillation is the final time
-    );
     p = make_ε_x(p);
     p = make_ε_t(p);
     p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p);
 
     # now consider all adimensional variables
+    @testset "Eigen energy" begin
+        n_h = 100;
+        m_h = 100;
+        x_h, w_h = gausshermite(n_h, normalize=true);
+        a = QuantumRecurrencePlots.Hermite_hat(m_h);
 
-    pp = (n = 10, tol=1e-4); # eigen state for size of grid
-    u0 = sqrt(pp.n*2 -1); # initial guess
-    f_to_opt(x,p) = exp(-x^2/2) *x^p.n - p.tol
-    prob = NonlinearProblem(f_to_opt, u0, pp)
-    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1];
-    L = 4*x_max/sqrt(p.ε_t/p.ε_x^2);  # x_max gives the size scale, L must be greater than this  
-    x = LinRange(-L/2, L/2 - L/p.N, p.N);
+        α = QuantumRecurrencePlots._harmonicPotential_xscale(p);
+        f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)/α^2;
+        msp = MSP_matrix_1D(x_h, w_h, a, f);
+        H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t * α^2; # we reescale the stiffnes matrix with the adimensional parameters 
+        λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int,m_h/3), which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
 
-    n_h = 100;
-    m_h = 50;
-    x_h, w_h = gausshermite(n_h, normalize=true);
-    a = QuantumRecurrencePlots.Hermite_hat(m_h);
-
-    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p);
-    msp = MSP_matrix_1D(x_h, w_h, a, f);
-    H = msp.P + msp.S * 1/2 * p.ε_x ^ 2 /p.ε_t; # we reescale the stiffnes matrix with the adimensional parameters 
-    λ, ψ_coeffs = eigs(H, msp.M; nev=pp.n-2, which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
+        @test isapprox(λ ./ QuantumRecurrencePlots._harmonicPotential_Escale(p),
+                        [0.5+i for i in 0:(length(λ)-1)]; atol=1e-8)
+    end
 end
