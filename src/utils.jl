@@ -438,5 +438,6 @@ function _lin_solve(X, y, W)
 end
 
 function _lin_solve(X, y)
-    return X \ y
+    prob = LinearSolve.LinearProblem(X, y)
+    sol = LinearSolve.solve(prob)
 end
