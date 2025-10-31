@@ -13,7 +13,6 @@ using SpecialFunctions
 using NonlinearSolve
 using LinearSolve
 
-
 # ---- includes ----
 include("utils.jl")
 include("PolynomialUtils.jl")
