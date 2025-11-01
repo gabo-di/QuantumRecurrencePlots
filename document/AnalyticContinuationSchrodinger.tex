@@ -23,7 +23,7 @@ sorting=ynt
 \begin{abstract}
 	In resent papers \cite{yordanov2024complex} \cite{yang2021extending} the wave function
 	was analytically extended to the positions complex plane, arguing that Quantum Mechanics can be understood as a
-	Complex Stochastic Optimal Control. In this work we study the analytical continuation of the Schr\"odinger Equation to the 
+	Complex Stochastic Optimal Control. In this work we study the analytical continuation of the Schr\"odinger Equation to the
 	complex plane in position and time, how to perform numerical simulations, and the meaning of the results.
 \end{abstract}
 
@@ -87,7 +87,7 @@ can be used on the Schr\"odinger Equation \ref{schr}, from which the imaginary p
 \partial_t \rho + \frac{\varepsilon_x^2}{\varepsilon_t} \partial_l \left( \rho \partial^l S \right) = 0
 \end{equation}
 
-where the velocity field is given by 
+where the velocity field is given by
 
 \begin{equation}\label{real_vel_field}
 v^l = \frac{\varepsilon_x^2}{\varepsilon_t} \partial^l S
@@ -113,10 +113,10 @@ where we can use the material derivative $\frac{d}{dt} = \frac{\partial}{\partia
 \frac{dv^k}{dt} =  -  \frac{\varepsilon_x^2}{ \varepsilon_t} \partial^kU
 \end{equation}
 
-From a numerical point of view Shcr\"odinger Equation \ref{schr} is easier to solve than the polar form \ref{cont_schr} and \ref{hj_schr}. In Classical Mechanics the Quantum potential does not exist, then it is easier to solve Newton equation \ref{newton} for an ensemble of positions and use a Monte Carlo simulation to evaluate mean values: 
+From a numerical point of view Shcr\"odinger Equation \ref{schr} is easier to solve than the polar form \ref{cont_schr} and \ref{hj_schr}. In Classical Mechanics the Quantum potential does not exist, then it is easier to solve Newton equation \ref{newton} for an ensemble of positions and use a Monte Carlo simulation to evaluate mean values:
 
 \begin{equation}\label{mc_integral}
-\int dx O \rho = \frac{1}{n} \sum_{i=1}^{n} O_i  
+\int dx O \rho = \frac{1}{n} \sum_{i=1}^{n} O_i
 \end{equation}
 
 where $O_i$ is the observable evaluated on each element of the ensemble of $n$ positions.
@@ -127,7 +127,7 @@ where $O_i$ is the observable evaluated on each element of the ensemble of $n$ p
 
 \section{Grad-Log-Schr\"odinger Equation}
 
-~~~~Consider 
+~~~~Consider
 
 \begin{equation}\label{log_psi}
 \gamma = \log(\psi)
@@ -136,7 +136,7 @@ where $O_i$ is the observable evaluated on each element of the ensemble of $n$ p
 and use the effective inverse mass parameter
 
 \begin{equation}\label{sigmass}
-\sigma_m^2 = \frac{\varepsilon_x^2}{\varepsilon_t} 
+\sigma_m^2 = \frac{\varepsilon_x^2}{\varepsilon_t}
 \end{equation}
 
 then Schr\"odinger Equation \ref{schr} becomes
@@ -161,15 +161,15 @@ we call this the Grad-Log-Schr\"odinger Equation. Using $ \eta^k = -i \sigma_m^2
 \frac{d \eta^k}{dt} = -  \frac{\sigma_m^2}{ \varepsilon_t} \partial^k  V + \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta^k
 \end{equation}
 
-but we have to assume a complex velocity 
+but we have to assume a complex velocity
 
 \begin{equation}\label{velocity_complex}
  \frac{\partial z^k}{\partial t} = \eta^k
 \end{equation}
 
-and the analytical continuation of the potential $V$ \cite{yordanov2024complex}. 
+and the analytical continuation of the potential $V$ \cite{yordanov2024complex}.
 
-The Newtonian Grad Log Shcr\"odinger equation tells how an ensemble of identical particles moves on the complex plane, where 
+The Newtonian Grad Log Shcr\"odinger equation tells how an ensemble of identical particles moves on the complex plane, where
 the interaction between the particles comes from the velocitypotential $ \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta^k$. It is clear
 that we recover classical mechanics on the complex plane if this interaction is zero, on other cases this is analogous to Bohm's
 quantum potential, with the difference that is linear, and does not depend on estimating the density of the particles, but directly uses
@@ -204,14 +204,14 @@ that gives the known solutions
 \begin{eqnarray}\label{log_free_particle}
 f_2(t) & = & \frac{f_2}{1 + 2i \sigma_m^2 f_2 t}  \\
 f_0(t) & = & f_0 + \frac{1}{2} \log \left( 1 + 2i \sigma_m^2 f_2 t \right) \\
-\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2 f_2}{ 
-1 + 2i \sigma_m^2 f_2 t} } 
+\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2 f_2}{
+1 + 2i \sigma_m^2 f_2 t} }
 \end{eqnarray}
 
-where we used $ f_0  = - \frac{1}{4} \log \left( \frac{4 f_2}{2 \pi} \right)$ to normalize the wave function. Note that considering the limit 
+where we used $ f_0  = - \frac{1}{4} \log \left( \frac{4 f_2}{2 \pi} \right)$ to normalize the wave function. Note that considering the limit
 $f_2->\infty$  on equation \ref{log_free_particle} we have a solution that resembles the free particle propagator
 \begin{equation}
-\psi(x,t) =   \left( \frac{1}{2\pi \left( i \sigma_m^2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2}{2i \sigma_m^2 t} } 
+\psi(x,t) =   \left( \frac{1}{2\pi \left( i \sigma_m^2 t  \right)^{2} } \right)^{1/4} e^{ \frac{-x^2}{2i \sigma_m^2 t} }
 \end{equation}
 
 An important result of eq \ref{log_free_particle} is the wave packet dispersion relation:
@@ -246,7 +246,7 @@ that gives the known solutions
 f_2(t) & = & \frac{f_2}{1 + 2i \sigma_m^2 f_2 t}  \\
 f_1(t) & = &  \frac{-i }{\sigma_m^2} \dot x_t\\
 f_0(t) & = & f_0 + \frac{1}{2} \log \left(1 + 2i \sigma_m^2 f_2 t  \right)  - \frac{i}{2\sigma_m^2} \dot x_t^2 t\\
-\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t \right)^{2} } \right)^{1/4} e^{ \frac{-(x-x_t)^2 f_2}{ 1 + 2i \sigma_m^2 f_2 t} +  \frac{i}{\sigma_m^2} \left(    \dot x_t (x-x_t) + \frac{1}{2} \dot x_t^2 t  \right) } 
+\psi(x,t) & = & \left( \frac{4 f_2}{2\pi \left( 1 + 2i \sigma_m^2 f_2 t \right)^{2} } \right)^{1/4} e^{ \frac{-(x-x_t)^2 f_2}{ 1 + 2i \sigma_m^2 f_2 t} +  \frac{i}{\sigma_m^2} \left(    \dot x_t (x-x_t) + \frac{1}{2} \dot x_t^2 t  \right) }
 \end{eqnarray}
 
 which has the dispersion relation given by \ref{dispersion_free_particle}
@@ -257,7 +257,7 @@ which has the dispersion relation given by \ref{dispersion_free_particle}
 
 \subsection{Log-Schr\"odinger Equation on harmonic potential}
 
-~~~~For the harmonic potential we have $V=\frac{m \omega'^2}{2} x'^2$, in dimensionless variables is 
+~~~~For the harmonic potential we have $V=\frac{m \omega'^2}{2} x'^2$, in dimensionless variables is
 $V = \frac{x^2 \omega^2}{2} \frac{\varepsilon_t^2}{\varepsilon_x^2} =\frac{x^2 \omega^2 \varepsilon_t}{2 \sigma_m^2} $.
 Which is convenient to rewrite like this:
 
@@ -304,7 +304,7 @@ f_1(t)  &=& -i \frac{\dot x_t}{\sigma_m^2} \\
 f_0(t) &=& \frac{1}{2}\log \left( \cos(\omega t + \phi_0) \right) - i \int dt \left(  \frac{\dot x_t^2}{2\sigma_m^2} - \frac{\omega^2 x_t^2}{2 \sigma_m^2}\right)
 \end{eqnarray}
 
-making $x_t(t) = 0$ and $\phi_0 = \pi/2$ we have the solution that resembles the harmonic propagator. 
+making $x_t(t) = 0$ and $\phi_0 = \pi/2$ we have the solution that resembles the harmonic propagator.
 
 Considering $\phi_0$ as a complex number, then dispersion relation of eq \ref{log_harmonic_sol} is
 
@@ -335,7 +335,7 @@ If we start from the initial condition
 
 \begin{equation}
 \gamma(z,0) = -z^2 f_2 - f_0
-\end{equation} 
+\end{equation}
 
 then for each initial position $z_0$ of the ensemble of particles  on the complex plane, we have the initial velocity
 
@@ -349,10 +349,10 @@ even more, since $\partial_l \partial^l \eta = 0$, then $\eta_0$ is constant, th
 z(t) = z_0(1+2i\sigma_m^2f_2t)
 \end{equation}
 
-in this case the dispersion relation is given by 
+in this case the dispersion relation is given by
 
 \begin{eqnarray}
-\langle z(t) \bar z(t) \rangle -  \langle z(t) \rangle \langle \bar z(t) \rangle  & = & 
+\langle z(t) \bar z(t) \rangle -  \langle z(t) \rangle \langle \bar z(t) \rangle  & = &
 (\langle z_0 \bar z_0 \rangle -  \langle z_0 \rangle \langle \bar z_0 \rangle)|1+2i\sigma_m^2f_2t|^2 \nonumber \\
 & = & \sigma_0^2 \left( (1 - 2\sigma_m^2\Im(f_2)t)^2 + (2\sigma_m^2\Re(f_2)t)^2 \right) \label{dispersion_free_particle_2}
 \end{eqnarray}
@@ -360,10 +360,10 @@ in this case the dispersion relation is given by
 which is equal to the dispersion relation \ref{dispersion_free_particle}
 
 
-The moving free particle has the initial condition 
+The moving free particle has the initial condition
 \begin{equation}
 \gamma(z,0) = -(z-a_0)^2 f_2 - (z-a_0) f_1 - f_0
-\end{equation} 
+\end{equation}
 
 where we use $a_0$ to indicate a constant complex number, that indicates the center of the distribution, which is different from $z_0$, that is the initial condition of each particle on the ensemble.
 
@@ -405,10 +405,10 @@ always follows $\frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta = 0$. And the 
 \frac{d \eta}{dt} = - \omega^2 z + \frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta
 \end{equation}
 
-using the initial condition 
+using the initial condition
 \begin{equation}
 \gamma(z,0) = -(z-a_0)^2 f_2 - (z-a_0) f_1 - f_0
-\end{equation} 
+\end{equation}
 
 then for each initial position $z_0$ of the ensemble of particles  on the complex plane, we have the initial velocity
 
@@ -428,12 +428,12 @@ and dispersion relation
 \begin{equation}
 \sigma^2(t) = \sigma_0^2\left( \left( \cos(\omega t) - \frac{2\sigma_m^2\Im(f_2)}{\omega} \sin(\omega t) \right)^2 + \left( \frac{2\sigma_m^2\Re(f_2)}{\omega} \sin(\omega t)  \right)^2 \right)
 \end{equation}
- 
-which is equal to the relation \ref{dispersion_harmonic} once that we recognize 
+
+which is equal to the relation \ref{dispersion_harmonic} once that we recognize
 
 \begin{eqnarray}
 \Re(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cosh(\Im(\phi_0)) \sinh(\Im(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))}  \\
-\Im(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cos(\Re(\phi_0)) \sin(\Re(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))} 
+\Im(f_2) & = & \frac{\omega}{2\sigma_m^2} \frac{\cos(\Re(\phi_0)) \sin(\Re(\phi_0))}{\cos^2(\Re(\phi_0)) + \sinh^2(\Im(\phi_0))}
 \end{eqnarray}
 
 An special case the dispersion relation is when $\Im(f_2)=0$ and $\Re(f_2) = \frac{\omega}{2\sigma_m^2}$ where we recover the coherent state $\sigma^2(t) = \frac{\sigma_m^2}{2\omega}$, or the ground state when $a_0=0$.
@@ -441,7 +441,7 @@ An special case the dispersion relation is when $\Im(f_2)=0$ and $\Re(f_2) = \fr
 As sanity check note the velocity:
 
 \begin{equation}
-\eta = \frac{\omega\left(  z (  2i\sigma_m^2f_2 \cos(\omega t) - \omega \sin(\omega t)) + i \sigma_m^2(f_1 - 2f_2 a_0)  \right)}{\omega \cos(\omega t) + 2i\sigma_m^2f_2 \sin(\omega t)} 
+\eta = \frac{\omega\left(  z (  2i\sigma_m^2f_2 \cos(\omega t) - \omega \sin(\omega t)) + i \sigma_m^2(f_1 - 2f_2 a_0)  \right)}{\omega \cos(\omega t) + 2i\sigma_m^2f_2 \sin(\omega t)}
 \end{equation}
 
 always follows $\frac{i\sigma_m^2}{2 } \partial_l \partial^l \eta = 0$. And the following energy relation holds for each particle
@@ -479,7 +479,7 @@ And the following energy relation holds for each particle
 \end{equation}
 
 
-We can observe that the nodal points of $\phi_n$ become poles of $\eta_n$, in the case of eigen states this poles are fixed, but in general they will move. 
+We can observe that the nodal points of $\phi_n$ become poles of $\eta_n$, in the case of eigen states this poles are fixed, but in general they will move.
 
 
 
@@ -500,7 +500,7 @@ Around simple poles we have the following wave function
 where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$. Then we have the following equations
 
 \begin{equation}
-\frac{d \psi}{dt}   =  - \dot p \varphi + (x-p) \dot \varphi 
+\frac{d \psi}{dt}   =  - \dot p \varphi + (x-p) \dot \varphi
 \end{equation}
 
 and
@@ -534,7 +534,7 @@ Around simple poles we have the following wave function
 where we assume that $\varphi(x,t)$ is regular and different from zero in the vicinity of $p(t)$ and $l>1$. Then we have the following equations
 
 \begin{equation}
-\frac{d \psi}{dt}   =  - \dot p l (x-p)^{l-1}\varphi + (x-p)^l \dot \varphi 
+\frac{d \psi}{dt}   =  - \dot p l (x-p)^{l-1}\varphi + (x-p)^l \dot \varphi
 \end{equation}
 
 and
@@ -589,7 +589,7 @@ with constant limits $m$ and $n$. Some important assumptions on eq \ref{eta_nume
 \end{itemize}
 
 
-If we have an initial wave function $\psi(x,0)$ from which we want to calculate some mean observables $\langle O(z,\eta) \rangle$, we can 
+If we have an initial wave function $\psi(x,0)$ from which we want to calculate some mean observables $\langle O(z,\eta) \rangle$, we can
  use Newton Grad Log Schr\"odinger equation \ref{newton_complex} with the following proposed algorithm:
 
 \begin{enumerate}
@@ -602,7 +602,7 @@ and determine the order $n$ {\bf check that all the residues are the same?}. The
 velocity potential.
 \item With any integrator of your choice find new values of $\eta$ and $z$ after an small time step. Update the poles position $p_j(t)$ with equation \ref{simple_pole_movement} and calculate the new values of $a_j(t)$  using LSQ method (or other of choice).
 \item Go to point 4 until the final time is reached.
-\item  The mean observable is given by $\langle O(z,\eta) \rangle = \sum_{l=1}^{N} O(z_{t,l}, \eta_{t,l}) w_l$ 
+\item  The mean observable is given by $\langle O(z,\eta) \rangle = \sum_{l=1}^{N} O(z_{t,l}, \eta_{t,l}) w_l$
 \end{enumerate}
 
 
@@ -615,7 +615,7 @@ velocity potential.
 \item Environment interaction allows mechanism to create and annihilate poles? If so $\rightarrow$ classical mechanics and/or thermodynamical limit
 \item Trajectory on time's complex plane does turn on thermodynamics?
 \item Entanglement can be modeled with several complex sheets?
-\item Similar interacting particles can be modeled as a 3D complex plane ensemble? 
+\item Similar interacting particles can be modeled as a 3D complex plane ensemble?
 \end{itemize}
 
 

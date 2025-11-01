@@ -287,7 +287,8 @@ function harmonic_eigen_state_sum_1D(x, t, c, p)
     gaussian = exp.(-(x) .^ 2 ./ (2σ²))
 
     # ...v sqrt(2) comes from He_n -> H_n
-    pol = Hermite_hat(n)(sqrt(2 / σ²) .* x)
+    a = Hermite(n)
+    pol = a(sqrt(2 / σ²) .* x)
     ss = zeros(ComplexF64, length(x))
     for i in eachindex(c)
         phase = exp(-im * t * (i - 1 / 2) * ω) # i starts in 1, but energy considers 0
@@ -399,6 +400,28 @@ end
 function _quarticPotential_Escale(p)
     # divide E by this number and eigenenergies are the same
     (sqrt(p.π_k_4) / _quarticPotential_xscale(p))
+end
+
+########################################
+# For expansion in Hermite Polynomials #
+########################################
+
+function hermite_expansion_state_sum_1D(x, t, c, e, s)
+    @assert length(c) == length(e)
+    @assert length(c) == size(s, 2)
+    n = size(s, 1)
+    gaussian = exp.(-(x) .^ 2 ./ 4)
+    pol = Hermite(n)(x)
+    pol_ = pol * s
+    ss = zeros(ComplexF64, length(x))
+    for i in eachindex(c)
+        phase = exp(-im * t * e[i])
+        ss .+= pol_[:, i] .* c[i] .* phase
+    end
+
+    prefactor = (1 / (π * 2))^(1 / 4)
+
+    return prefactor .* ss .* gaussian
 end
 
 ####################

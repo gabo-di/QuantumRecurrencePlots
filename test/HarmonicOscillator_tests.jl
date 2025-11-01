@@ -222,7 +222,7 @@ using FastGaussQuadrature
         t0 = 0.0 # initial time
         t = LinRange(t0, tmax, p.nt)
 
-        c = [1, 1, sqrt(2), sqrt(6)] # gives 3 pole of order 1 initially in x = [-2, 0, 1] ./ sqrt(2)
+        c = [1, 1, 1, 1]
         psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, t0, c, p)
 
         # Solve using split-step Fourier method
@@ -244,7 +244,7 @@ using FastGaussQuadrature
 end
 
 @testset "Eigen states" begin
-    p = (
+    p_1 = (
         N = 1024,      # Number of grid points (higher for better accuracy)
         nt = 10000,     # number of time steps
         L_0 = 100.0,    # Length scale
@@ -256,25 +256,93 @@ end
         τ = 4.22121    # τ times period of oscillation is the final time
     )
 
-    p = make_ε_x(p)
-    p = make_ε_t(p)
-    p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p)
+    p_1 = make_ε_x(p_1)
+    p_1 = make_ε_t(p_1)
+    p_1 = QuantumRecurrencePlots.make_harmonicPotential_π_k(p_1)
 
+    # different parameter set
+    p_2 = (
+        N = 1024,      # Number of grid points (higher for better accuracy)
+        nt = 10000,     # number of time steps
+        L_0 = 1.0,    # Length scale
+        E_0 = 1.0,     # Energy scale
+        T_0 = 1.0,     # Time scale
+        ħ = 1.0,       # hbar
+        m = 1.0,       # mass of particle
+        k_2 = 1.0,        # harmonic potential mω^2
+        τ = 4.22121    # τ times period of oscillation is the final time
+    )
+
+    p_2 = make_ε_x(p_2)
+    p_2 = make_ε_t(p_2)
+    p_2 = QuantumRecurrencePlots.make_harmonicPotential_π_k(p_2)
     # now consider all adimensional variables
-    @testset "Eigen energy" begin
-        n_h = 100
-        m_h = 100
-        x_h, w_h = gausshermite(n_h, normalize = true)
-        a = QuantumRecurrencePlots.Hermite_hat(m_h)
+    n_h = 100
+    m_h = 100
+    x_h, w_h = gausshermite(n_h, normalize = true)
+    a = QuantumRecurrencePlots.Hermite(m_h)
 
-        α = QuantumRecurrencePlots._harmonicPotential_xscale(p)
-        f(x) = QuantumRecurrencePlots.harmonicPotential(x, p) / α^2
-        msp = MSP_matrix_1D(x_h, w_h, a, f)
-        H = msp.P + msp.S * 1 / 2 * p.ε_x^2 / p.ε_t * α^2 # we reescale the stiffnes matrix with the adimensional parameters
-        λ, ψ_coeffs = eigs(H, msp.M; nev = round(Int, m_h / 3), which = :LR,
-            check = 1, maxiter = 1000, tol = 1e-5, sigma = 1e-3) # smallest
+    α_1 = QuantumRecurrencePlots._harmonicPotential_xscale(p_1)
+    f_1(x) = QuantumRecurrencePlots.harmonicPotential(x, p_1) / α_1^2
+    msp_1 = MSP_matrix_1D(x_h, w_h, a, f_1)
+    H_1 = msp_1.P + msp_1.S * 1 / 2 * p_1.ε_x^2 / p_1.ε_t * α_1^2 # we reescale the stiffnes matrix with the adimensional parameters
+    λ_1, ψ_coeffs_1 = eigen(H_1, msp_1.M) # note that arpack gives awfull results when M is not the identity
 
-        @test isapprox(λ ./ QuantumRecurrencePlots._harmonicPotential_Escale(p),
-            [0.5 + i for i in 0:(length(λ) - 1)]; atol = 1e-8)
+    α_2 = QuantumRecurrencePlots._harmonicPotential_xscale(p_2)
+    f_2(x) = QuantumRecurrencePlots.harmonicPotential(x, p_2) / α_2^2
+    msp_2 = MSP_matrix_1D(x_h, w_h, a, f_2)
+    H_2 = msp_2.P + msp_2.S * 1 / 2 * p_2.ε_x^2 / p_2.ε_t * α_2^2 # we reescale the stiffnes matrix with the adimensional parameters
+    λ_2, ψ_coeffs_2 = eigen(H_2, msp_2.M) # note that arpack gives awfull results when M is not the identity
+
+    @testset "Eigen energy scale" begin
+        @test isapprox(λ_1 ./ QuantumRecurrencePlots._harmonicPotential_Escale(p_1),
+            [0.5 + i for i in 0:(length(λ_1) - 1)]; atol = 1e-8)
+        @test isapprox(λ_1 ./ QuantumRecurrencePlots._harmonicPotential_Escale(p_1),
+            λ_2 ./ QuantumRecurrencePlots._harmonicPotential_Escale(p_2); atol = 1e-8)
+    end
+
+    @testset "Eigen vectors parameter invariance" begin
+        @test isapprox(ψ_coeffs_2[1, 1:20] ./ ψ_coeffs_2[1, 1],
+            ψ_coeffs_1[1, 1:20] ./ ψ_coeffs_1[1, 1]; atol = 1e-6)
+        @test isapprox(ψ_coeffs_2[2, 1:20] ./ ψ_coeffs_2[2, 2],
+            ψ_coeffs_1[2, 1:20] ./ ψ_coeffs_1[2, 2]; atol = 1e-6)
+        @test isapprox(ψ_coeffs_2[3, 1:20] ./ ψ_coeffs_2[3, 3],
+            ψ_coeffs_1[3, 1:20] ./ ψ_coeffs_1[3, 3]; atol = 1e-6)
+        @test isapprox(ψ_coeffs_2[4, 1:20] ./ ψ_coeffs_2[4, 4],
+            ψ_coeffs_1[4, 1:20] ./ ψ_coeffs_1[4, 4]; atol = 1e-6)
+        @test isapprox(ψ_coeffs_2[5, 1:20] ./ ψ_coeffs_2[5, 5],
+            ψ_coeffs_1[5, 1:20] ./ ψ_coeffs_1[5, 5]; atol = 1e-6)
+    end
+
+    @testset "Evolution in eigensystem" begin
+        pp = (n = 10, tol = 1e-4) # eigen state for size of grid
+        u0 = sqrt(pp.n * 2 - 1) # initial guess
+        f_to_opt(x, p) = exp(-x^2 / 2) * x^p.n - p.tol
+        prob = NonlinearProblem(f_to_opt, u0, pp)
+        x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1]
+        L = 4 * x_max / sqrt(sqrt(p_1.π_k_2) * p_1.ε_t / p_1.ε_x^2)  # x_max gives the size scale, L must be greater than this
+        x = LinRange(-L / 2, L / 2 - L / p_1.N, p_1.N)
+        tmax = p_1.τ * QuantumRecurrencePlots.get_periodHarmonicPotential(p_1) # Evolve for one full period
+        t0 = 0.0 # initial time
+        t = LinRange(t0, tmax, p_1.nt)
+
+        in = 5
+        c = ones(in)
+        e = λ_1[1:in]
+        s = ψ_coeffs_1[1:(in * 2), 1:in]
+        psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(
+            x .* α_1, t0, c, e, s) .*
+                sqrt(α_1)
+        psi_t = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(
+            x .* α_1, tmax, c, e, s) .*
+                sqrt(α_1)
+        p_1 = QuantumRecurrencePlots.makeParsFFT_1D(x .* α_1, p_1)
+        kin_(x) = QuantumRecurrencePlots.kineticEnergy(x, p_1) * α_1^2
+        f_(x) = QuantumRecurrencePlots.harmonicPotential(x, p_1) / α_1^2
+        psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(
+            x .* α_1, t, p_1, psi_0, f_, kin_)
+        psi_a = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, s * c, p_1) # note that in this way they have same value
+        @test isapprox(psi_t, psi_a)
+        @test isapprox(psi_t, psi_n)
     end
 end

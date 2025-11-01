@@ -42,17 +42,26 @@ function MSP_matrix_1D(x, w, a::PolyBasis{:hermite}, f = nothing)
     end
     for i in 0:(n - 2)
         for j in 0:(n - 2)
-            m = dot(w, V[:, i + 1] .* V[:, j + 1])
+            # m = dot(w, V[:, i + 1] .* V[:, j + 1])
+            m = a.f_norm(i, j)
 
-            s = 1 / 4 * kronecker(j + 1, i + 1) * dot(w, V[:, i + 1] .* V[:, i + 1]) *
-                (i + 1) -
-                j / 4 * kronecker(j - 1, i + 1) * dot(w, V[:, i + 1] .* V[:, i + 1]) *
-                (i + 1) -
-                i / 4 * kronecker(j + 1, i - 1) * dot(w, V[:, j + 1] .* V[:, j + 1]) *
-                (j + 1)
+            # s = 1 / 4 * kronecker(j + 1, i + 1) * dot(w, V[:, i + 1] .* V[:, i + 1]) *
+            #     (i + 1) -
+            #     j / 4 * kronecker(j - 1, i + 1) * dot(w, V[:, i + 1] .* V[:, i + 1]) *
+            #     (i + 1) -
+            #     i / 4 * kronecker(j + 1, i - 1) * dot(w, V[:, j + 1] .* V[:, j + 1]) *
+            #     (j + 1)
+            # if i > 1
+            #     s += i * j / 4 * kronecker(j - 1, i - 1) *
+            #          dot(w, V[:, i - 1] .* V[:, i - 1]) * (i - 1)
+            # elseif i == 1
+            #     s += i * j / 4 * kronecker(j - 1, i - 1)
+            # end
+            s = 1 / 4 * a.f_norm(i, i) * (i + 1) * kronecker(j + 1, i + 1) -
+                j / 4 * a.f_norm(i, i) * (i + 1) * kronecker(j - 1, i + 1) -
+                i / 4 * a.f_norm(j, j) * (j + 1) * kronecker(j + 1, i - 1)
             if i > 1
-                s += i * j / 4 * kronecker(j - 1, i - 1) *
-                     dot(w, V[:, i - 1] .* V[:, i - 1]) * (i - 1)
+                s += i * j / 4 * a.f_norm(i - 2, i - 2) * (i - 1) * kronecker(j - 1, i - 1)
             elseif i == 1
                 s += i * j / 4 * kronecker(j - 1, i - 1)
             end

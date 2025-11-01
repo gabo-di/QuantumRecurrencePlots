@@ -33,6 +33,9 @@ function main()
 
     # now consider all adimensional variables
 
+    ######
+    # Hand made eigen states should evolve as expected
+
     # Make grid finding optimal size knowing "last eigenstate"
     pp = (n = 10, tol = 1e-4) # eigen state for size of grid
     u0 = sqrt(pp.n * 2 - 1) # initial guess
@@ -51,8 +54,7 @@ function main()
     t = LinRange(t0, tmax, p.nt)
 
     # psi initial
-    c = [1, 1] # gives pole of order 1 initially in x = -1 / sqrt(2)
-    c = [1, 1, sqrt(2), sqrt(6)] # gives 3 pole of order 1 initially in x = [-2, 0, 1] ./ sqrt(2)
+    c = [1, 1, 1, 1] # gives 3 pole of order 1 initially in x = [-2, 0, 1] ./ sqrt(2)
     psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, t0, c, p)
     # psi_0 .= psi_0 / sqrt(sum(abs2.(psi_0)));
 
@@ -68,15 +70,17 @@ function main()
 
     # Generate and save the plot
     fig = Figure(size = (1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_0)
 
     # Display the figure if running interactively
     display(fig)
 
+    ######
+    # Find Eigen states using MSP should be 10000 01000 00100 etc
+
     n_h = 100
     m_h = 100
     x_h, w_h = gausshermite(n_h, normalize = true)
-    # a = QuantumRecurrencePlots.Hermite_hat(m_h);
     a = QuantumRecurrencePlots.Hermite(m_h)
 
     α = QuantumRecurrencePlots._harmonicPotential_xscale(p)
@@ -98,6 +102,26 @@ function main()
     ylims!(ax, -10, 1)
 
     display(fig)
+
+    ######
+    # Check MSP Eigen states evolve as expected
+    in = 5
+    c = rand(in)
+    e = λ[1:in]
+    s = ψ_coeffs[1:(in * 2), 1:in]
+    psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, t0, c, e, s) .*
+            sqrt(α)
+    psi_t = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, tmax, c, e, s) .*
+            sqrt(α)
+    p = QuantumRecurrencePlots.makeParsFFT_1D(x .* α, p)
+    kin_(x) = QuantumRecurrencePlots.kineticEnergy(x, p) * α^2
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x .* α, t, p, psi_0, f_, kin_)
+    # psi_n = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, s * c, p) # note that in this way they have same value
+
+    fig = Figure(size = (1200, 800))
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
+    display(fig)
+
     return λ, ψ_coeffs, msp, p
 end
 
@@ -128,7 +152,7 @@ function main_()
     f_to_opt(x, p) = exp(-x^2 / 2) * x^p.n - p.tol
     prob = NonlinearProblem(f_to_opt, u0, pp)
     x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1]
-    L = 4 * x_max / sqrt(p.ε_t / p.ε_x^2)  # x_max gives the size scale, L must be greater than this
+    L = 1 * x_max / sqrt(p.ε_t / p.ε_x^2)  # x_max gives the size scale, L must be greater than this
     x = LinRange(-L / 2, L / 2 - L / p.N, p.N)
 
     n_h = 100
@@ -145,16 +169,41 @@ function main_()
 
     fig = Figure(size = (800, 800))
     ax = Axis(fig[1, 1])
-    n_eigs = 20#round(Int, m_h/3)
+    n_eigs = min(12, m_h - 1)#round(Int, m_h/3)
     for i in 1:n_eigs #axes(ψ_coeffs, 2)
         nn = maximum(sqrt.(abs2.(ψ_coeffs[:, i])))
-        lines!(ax, (range(0, n_eigs - 1)), log10.(abs2.(ψ_coeffs[1:n_eigs, i] ./ nn)),
+        scatter!(ax, (range(0, n_eigs - 1)), log10.(abs2.(ψ_coeffs[1:n_eigs, i] ./ nn)),
             label = "$(i-1) eigenstate")
     end
     axislegend(ax, position = :rt)
     ylims!(ax, -10, 1)
 
+    # display(fig)
+
+    ######
+    # Check MSP Eigen states evolve as expected
+    in = 6
+    c = ones(in)
+    c[(in - 1):in] .= 0 #last eigenvalues can have some errors
+    e = λ[1:in]
+    s = ψ_coeffs[1:(in * 2), 1:in]
+    tmax = 2pi / λ[1] * p.τ
+    t0 = 0.0
+    t = LinRange(t0, tmax, p.nt)
+    psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, t0, c, e, s) .*
+            sqrt(α)
+    psi_t = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, tmax, c, e, s) .*
+            sqrt(α)
+    p = QuantumRecurrencePlots.makeParsFFT_1D(x .* α, p)
+    kin_(x) = QuantumRecurrencePlots.kineticEnergy(x, p) * α^2
+    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x .* α, t, p, psi_0, f_, kin_)
+
+    fig = Figure(size = (1200, 800))
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
     display(fig)
+    @show maximum(abs2.(
+        psi_t ./ sqrt(sum(abs2.(psi_t))) - psi_n ./ sqrt(sum(abs2.(psi_n))))) # awfull performance
+
     return λ, ψ_coeffs, msp, p
 end
 
