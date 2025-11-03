@@ -406,11 +406,15 @@ end
 # For expansion in Hermite Polynomials #
 ########################################
 
-function hermite_expansion_state_sum_1D(x, t, c, e, s)
+function hermite_expansion_state_sum_1D(x, t, c, e, s; log_gaussian = true)
     @assert length(c) == length(e)
     @assert length(c) == size(s, 2)
     n = size(s, 1)
-    gaussian = exp.(-(x) .^ 2 ./ 4)
+    if log_gaussian
+        gaussian = exp.(-(x) .^ 2 ./ 4)
+    else
+        gaussian = 1
+    end
     pol = Hermite(n)(x)
     pol_ = pol * s
     ss = zeros(ComplexF64, length(x))
@@ -422,6 +426,34 @@ function hermite_expansion_state_sum_1D(x, t, c, e, s)
     prefactor = (1 / (π * 2))^(1 / 4)
 
     return prefactor .* ss .* gaussian
+end
+
+function make_nonlinearfunction_hermite_expansion_1D(c, e, s)
+    rhs = function (x, t)
+        n = size(s, 1)
+        pol = Hermite(n)(x)
+        pol_ = pol * s
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] * c[i] * phase
+        end
+        return ss
+    end
+    jac = function (x, t)
+        n = size(s, 1)
+        a = Hermite(n)
+        pol = a(x)
+        A = QuantumRecurrencePlots.derivative_polybasis(a)
+        pol_ = pol * (A * s)
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] .* c[i] .* phase
+        end
+        return ss
+    end
+    fn = NonlinearFunction(rhs; jac)
 end
 
 ####################

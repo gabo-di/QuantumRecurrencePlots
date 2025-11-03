@@ -30,7 +30,7 @@ function (basis::PolyBasis)(x::AbstractArray{T}) where {T}
         return reshape(basis.f0.(x), size(x)..., 1)
     end
 
-    y = zeros(T, prod(size(x)), basis.n)
+    y = fill(zero(T), prod(size(x)), basis.n)
     y[:, 1] .= basis.f0.(x[:])
     y[:, 2] .= basis.f1.(x[:])
 
@@ -39,7 +39,6 @@ function (basis::PolyBasis)(x::AbstractArray{T}) where {T}
                    basis.a1.(i - 2, x[:]) .* y[:, i - 1]) ./ basis.a2.(i - 2, x[:])
     end
 
-    # z = basis.f_norm.(x[:])
     return reshape(y, size(x)..., basis.n)
 end
 

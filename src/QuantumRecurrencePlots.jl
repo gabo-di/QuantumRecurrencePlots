@@ -12,6 +12,7 @@ using FastGaussQuadrature
 using SpecialFunctions
 using NonlinearSolve
 using LinearSolve
+using HomotopyContinuation
 
 # ---- includes ----
 include("utils.jl")

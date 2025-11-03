@@ -2,7 +2,7 @@ using DrWatson
 @quickactivate "QuantumRecurrencePlots"
 using QuantumRecurrencePlots
 using FFTW
-using CairoMakie
+using GLMakie
 using LinearAlgebra
 using Infiltrator
 using Gridap
@@ -54,7 +54,7 @@ function main()
     t = LinRange(t0, tmax, p.nt)
 
     # psi initial
-    c = [1, 1, 1, 1] # gives 3 pole of order 1 initially in x = [-2, 0, 1] ./ sqrt(2)
+    c = [1, 1, 1, 1] # gives 3 pole of order 1 initially in x = [-2, 0, 1]
     psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, t0, c, p)
     # psi_0 .= psi_0 / sqrt(sum(abs2.(psi_0)));
 
@@ -70,10 +70,10 @@ function main()
 
     # Generate and save the plot
     fig = Figure(size = (1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_0)
+    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
 
     # Display the figure if running interactively
-    display(fig)
+    # display(fig)
 
     ######
     # Find Eigen states using MSP should be 10000 01000 00100 etc
@@ -101,12 +101,13 @@ function main()
     axislegend(ax, position = :rt)
     ylims!(ax, -10, 1)
 
-    display(fig)
+    # display(fig)
 
     ######
     # Check MSP Eigen states evolve as expected
-    in = 5
-    c = rand(in)
+
+    in = 4
+    c = [1, 1, 1, 1]
     e = λ[1:in]
     s = ψ_coeffs[1:(in * 2), 1:in]
     psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, t0, c, e, s) .*
@@ -120,9 +121,67 @@ function main()
 
     fig = Figure(size = (1200, 800))
     QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
-    display(fig)
+    # display(fig)
 
-    return λ, ψ_coeffs, msp, p
+    ######
+    # HC solver
+
+    for i in eachindex(s)
+        if abs(s[i]) < 1e-5
+            s[i] = 0
+        end
+    end
+
+    alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
+    rhs = function (x, t)
+        n = size(s, 1)
+        pol = Hermite(n)(x)
+        pol_ = pol * s
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] * c[i] * phase
+        end
+        return ss
+    end
+    jac = function (x, t)
+        n = size(s, 1)
+        a = Hermite(n)
+        pol = a(x)
+        A = QuantumRecurrencePlots.derivative_polybasis(a)
+        pol_ = pol * (A * s)
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] .* c[i] .* phase
+        end
+        return ss
+    end
+    fn = NonlinearFunction(rhs; jac)
+    prob = NonlinearProblem(fn, 0.0, [t0])
+    _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
+        prob, alg)
+    orig_sol = HC.solve(hcsys; alg.kwargs...)
+    allsols = HC.solutions(orig_sol)
+    println("\n\nCCCCCCCCCCCCC t=", t0, "\n")
+    @show HC.real_solutions(orig_sol) ./ α
+
+    _, hcsys_ = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
+        remake(prob, p = [tmax / 2]), alg)
+
+    H = HC.StraightLineHomotopy(hcsys, hcsys_)
+    sol = HC.solve(H, allsols; alg.kwargs...)
+    println("\n\nCCCCCCCCCCCCC t=", tmax / 2, "\n")
+    @show HC.real_solutions(sol.path_results) ./ α
+
+    H.target.p[1] = tmax
+    sol = HC.solve(H, allsols; alg.kwargs...)
+    println("\n\nCCCCCCCCCCCCC t=", tmax, "\n")
+    @show HC.real_solutions(sol.path_results) ./ α
+
+    @show α
+
+    return sol, H, hcsys, hcsys_
 end
 
 # quartic potential
@@ -200,25 +259,63 @@ function main_()
 
     fig = Figure(size = (1200, 800))
     QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
-    display(fig)
-    @show maximum(abs2.(
-        psi_t ./ sqrt(sum(abs2.(psi_t))) - psi_n ./ sqrt(sum(abs2.(psi_n))))) # awfull performance
+    # display(fig)
 
-    return λ, ψ_coeffs, msp, p
-end
+    ######
+    # HC solver
 
-function main_1()
-    alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
-    rhs = function (u, p)
-        return u * u - p[1] * u + p[2]
+    for i in eachindex(s)
+        if abs(s[i]) < 1e-8
+            s[i] = 0
+        end
     end
-    jac = function (u, p)
-        return 2u - p[1]
+
+    alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
+    rhs = function (x, t)
+        n = size(s, 1)
+        pol = Hermite(n)(x)
+        pol_ = pol * s
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] * c[i] * phase
+        end
+        return ss
+    end
+    jac = function (x, t)
+        n = size(s, 1)
+        a = Hermite(n)
+        pol = a(x)
+        A = QuantumRecurrencePlots.derivative_polybasis(a)
+        pol_ = pol * (A * s)
+        ss = zero(x)
+        for i in eachindex(c)
+            phase = exp(-im * t[1] * e[i])
+            ss += pol_[1, i] .* c[i] .* phase
+        end
+        return ss
     end
     fn = NonlinearFunction(rhs; jac)
-    prob = NonlinearProblem(fn, 1.0 + im, [5.0, 6.0])
-    f, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
+    prob = NonlinearProblem(fn, 0.0, [t0])
+    _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
         prob, alg)
     orig_sol = HC.solve(hcsys; alg.kwargs...)
     allsols = HC.solutions(orig_sol)
+    println("\n\nCCCCCCCCCCCCC t=", t0, "\n")
+    @show HC.real_solutions(orig_sol) ./ α
+
+    _, hcsys_ = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
+        remake(prob, p = [tmax / 2]), alg)
+
+    H = HC.StraightLineHomotopy(hcsys, hcsys_)
+    sol = HC.solve(H, allsols; alg.kwargs...)
+    println("\n\nCCCCCCCCCCCCC t=", tmax / 2, "\n")
+    @show HC.real_solutions(sol.path_results) ./ α
+
+    H.target.p[1] = tmax
+    sol = HC.solve(H, allsols; alg.kwargs...)
+    println("\n\nCCCCCCCCCCCCC t=", tmax, "\n")
+    @show HC.real_solutions(sol.path_results) ./ α
+
+    return sol, H, hcsys, hcsys_
 end
