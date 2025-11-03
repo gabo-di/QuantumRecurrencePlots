@@ -133,31 +133,7 @@ function main()
     end
 
     alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
-    rhs = function (x, t)
-        n = size(s, 1)
-        pol = Hermite(n)(x)
-        pol_ = pol * s
-        ss = zero(x)
-        for i in eachindex(c)
-            phase = exp(-im * t[1] * e[i])
-            ss += pol_[1, i] * c[i] * phase
-        end
-        return ss
-    end
-    jac = function (x, t)
-        n = size(s, 1)
-        a = Hermite(n)
-        pol = a(x)
-        A = QuantumRecurrencePlots.derivative_polybasis(a)
-        pol_ = pol * (A * s)
-        ss = zero(x)
-        for i in eachindex(c)
-            phase = exp(-im * t[1] * e[i])
-            ss += pol_[1, i] .* c[i] .* phase
-        end
-        return ss
-    end
-    fn = NonlinearFunction(rhs; jac)
+    fn = QuantumRecurrencePlots.make_nonlinearfunction_hermite_expansion_1D(c, e, s)
     prob = NonlinearProblem(fn, 0.0, [t0])
     _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
         prob, alg)
@@ -271,31 +247,7 @@ function main_()
     end
 
     alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
-    rhs = function (x, t)
-        n = size(s, 1)
-        pol = Hermite(n)(x)
-        pol_ = pol * s
-        ss = zero(x)
-        for i in eachindex(c)
-            phase = exp(-im * t[1] * e[i])
-            ss += pol_[1, i] * c[i] * phase
-        end
-        return ss
-    end
-    jac = function (x, t)
-        n = size(s, 1)
-        a = Hermite(n)
-        pol = a(x)
-        A = QuantumRecurrencePlots.derivative_polybasis(a)
-        pol_ = pol * (A * s)
-        ss = zero(x)
-        for i in eachindex(c)
-            phase = exp(-im * t[1] * e[i])
-            ss += pol_[1, i] .* c[i] .* phase
-        end
-        return ss
-    end
-    fn = NonlinearFunction(rhs; jac)
+    fn = QuantumRecurrencePlots.make_nonlinearfunction_hermite_expansion_1D(c, e, s)
     prob = NonlinearProblem(fn, 0.0, [t0])
     _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
         prob, alg)
