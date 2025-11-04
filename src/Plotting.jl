@@ -1,4 +1,5 @@
 using Makie
+using DomainColoring
 
 function plot_comparison_1D!(fig, x, tmax, ψ_numerical, ψ_analytical)
     # fig = Figure(size=(1200, 800))
@@ -44,7 +45,31 @@ function plot_comparison_1D!(fig, x, tmax, ψ_numerical, ψ_analytical)
         fontsize = 20)
 
     return nothing
-    # return fig
+end
+
+function plot_wave_poles_1D!(fn, limits, wh = abs2)
+    fig = Figure(size = (800, 400))
+
+    ax1 = Axis(fig[1, 1])
+    domaincolor!(ax1, fn, limits; abs = Inf, grid = true)
+
+    pixels = 720
+    x = range(-limits, limits, pixels)
+    y = range(-limits, limits, pixels)
+    z = zeros(Float64, pixels, pixels)
+    for i in eachindex(x)
+        xx = x[i]
+        for j in eachindex(y)
+            yy = y[j]
+            zz = fn(xx + im * yy) * exp(-(xx + im * yy)^2 / 2)
+            z[i, j] = wh(zz)
+        end
+    end
+
+    ax2 = Axis(fig[1, 2])
+    heatmap!(ax2, x, y, z; colormap = :rainbow)
+
+    return fig
 end
 
 function to_plot_femfunctions_1D(x, V, ψ_coeffs, M)

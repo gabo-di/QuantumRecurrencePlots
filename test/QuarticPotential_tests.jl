@@ -62,6 +62,7 @@ using FastGaussQuadrature
         @test isapprox(λ_1 ./ QuantumRecurrencePlots._quarticPotential_Escale(p_1),
             λ_2 ./ QuantumRecurrencePlots._quarticPotential_Escale(p_2); atol = 1e-8) # some times atol=1e-8 does not work is strange since we do not use random numbers
     end
+
     @testset "Eigen vectors parameter invariance" begin
         @test isapprox(ψ_coeffs_2[1, 1:ni] ./ ψ_coeffs_2[1, 1],
             ψ_coeffs_1[1, 1:ni] ./ ψ_coeffs_1[1, 1]; atol = 1e-6)

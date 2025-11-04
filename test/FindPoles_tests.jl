@@ -9,7 +9,7 @@ import HomotopyContinuation as HC
 @testset "Find zeros" begin
     alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
     T = Float64
-    e = T[1 / 2, 1, 3 / 2, 2]
+    e = T[1 / 2, 1, 3 / 2, 2] #note that these are not the eigen energies of harmonico oscillator
     s = diagm(ones(T, 4))
     @testset "First order zero" begin
         c = T[1, 1, 1, 1]

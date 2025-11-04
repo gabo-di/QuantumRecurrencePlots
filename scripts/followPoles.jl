@@ -11,19 +11,20 @@ using NonlinearSolve
 using Arpack
 using NonlinearSolveHomotopyContinuation
 import HomotopyContinuation as HC
+using OrdinaryDiffEq
 
 # harmonic oscillator
 function main()
     p = (
         N = 1024,      # Number of grid points (higher for better accuracy)
-        nt = 10000,     # number of time steps
+        nt = 1000,     # number of time steps
         L_0 = 100.0,    # Length scale
         E_0 = 10.0,     # Energy scale
         T_0 = 14.0,     # Time scale
         ħ = 12.0,       # hbar
         m = 2.0,       # mass of particle
         k_2 = 13.0,        # harmonic potential mω^2
-        τ = 4.22121    # τ times period of oscillation is the final time
+        nsols = 50          # number of times to find the zeros >=2
     )
 
     # prepare the adimensional parameters, not all scales are independent
@@ -33,51 +34,6 @@ function main()
 
     # now consider all adimensional variables
 
-    ######
-    # Hand made eigen states should evolve as expected
-
-    # Make grid finding optimal size knowing "last eigenstate"
-    pp = (n = 10, tol = 1e-4) # eigen state for size of grid
-    u0 = sqrt(pp.n * 2 - 1) # initial guess
-    f_to_opt(x, p) = exp(-x^2 / 2) * x^p.n - p.tol
-    prob = NonlinearProblem(f_to_opt, u0, pp)
-    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1]
-    L = 4 * x_max / sqrt(sqrt(p.π_k_2) * p.ε_t / p.ε_x^2)  # x_max gives the size scale, L must be greater than this
-    x = LinRange(-L / 2, L / 2 - L / p.N, p.N)
-
-    # prepare parameters for FFT
-    p = QuantumRecurrencePlots.makeParsFFT_1D(x, p)
-
-    # Time parameters
-    tmax = p.τ * QuantumRecurrencePlots.get_periodHarmonicPotential(p) # Evolve for one full period
-    t0 = 0.0 # initial time
-    t = LinRange(t0, tmax, p.nt)
-
-    # psi initial
-    c = [1, 1, 1, 1] # gives 3 pole of order 1 initially in x = [-2, 0, 1]
-    psi_0 = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, t0, c, p)
-    # psi_0 .= psi_0 / sqrt(sum(abs2.(psi_0)));
-
-    # Solve using split-step Fourier method
-    f(x) = QuantumRecurrencePlots.harmonicPotential(x, p)
-    kin(x) = QuantumRecurrencePlots.kineticEnergy(x, p)
-
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x, t, p, psi_0, f, kin)
-
-    # Analytical solution
-    psi_t = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, c, p)
-    # psi_t .= psi_t / sqrt(sum(abs2.(psi_t)));
-
-    # Generate and save the plot
-    fig = Figure(size = (1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
-
-    # Display the figure if running interactively
-    # display(fig)
-
-    ######
-    # Find Eigen states using MSP should be 10000 01000 00100 etc
-
     n_h = 100
     m_h = 100
     x_h, w_h = gausshermite(n_h, normalize = true)
@@ -86,78 +42,112 @@ function main()
     α = QuantumRecurrencePlots._harmonicPotential_xscale(p)
     f_(x) = QuantumRecurrencePlots.harmonicPotential(x, p) / α^2
     msp = MSP_matrix_1D(x_h, w_h, a, f_)
-    H = msp.P + msp.S * 1 / 2 * p.ε_x^2 / p.ε_t * α^2 # we reescale the stiffnes matrix with the adimensional parameters
-    # λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int, m_h/3), which=:LR,check=1,maxiter=1000,tol=1e-5, sigma=1e-3); # smallest
-    λ, ψ_coeffs = eigen(H, msp.M) # note that arpack gives awfull results when M is not the identity
-
-    fig = Figure(size = (800, 800))
-    ax = Axis(fig[1, 1])
-    n_eigs = 20#round(Int, m_h/3)
-    for i in 1:n_eigs #axes(ψ_coeffs, 2)
-        nn = maximum(sqrt.(abs2.(ψ_coeffs[:, i])))
-        lines!(ax, (range(0, n_eigs - 1)), log10.(abs2.(ψ_coeffs[1:n_eigs, i] ./ nn)),
-            label = "$(i-1) eigenstate")
-    end
-    axislegend(ax, position = :rt)
-    ylims!(ax, -10, 1)
-
-    # display(fig)
-
-    ######
-    # Check MSP Eigen states evolve as expected
+    # we reescale the stiffnes matrix with the adimensional parameters
+    H = msp.P + msp.S * 1 / 2 * p.ε_x^2 / p.ε_t * α^2
+    λ, ψ_coeffs = eigen(H, msp.M)
 
     in = 4
-    c = [1, 1, 1, 1]
-    e = λ[1:in]
-    s = ψ_coeffs[1:(in * 2), 1:in]
-    psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, t0, c, e, s) .*
-            sqrt(α)
-    psi_t = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, tmax, c, e, s) .*
-            sqrt(α)
-    p = QuantumRecurrencePlots.makeParsFFT_1D(x .* α, p)
-    kin_(x) = QuantumRecurrencePlots.kineticEnergy(x, p) * α^2
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x .* α, t, p, psi_0, f_, kin_)
-    # psi_n = QuantumRecurrencePlots.harmonic_eigen_state_sum_1D(x, tmax, s * c, p) # note that in this way they have same value
-
-    fig = Figure(size = (1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
-    # display(fig)
-
-    ######
-    # HC solver
-
-    for i in eachindex(s)
-        if abs(s[i]) < 1e-5
-            s[i] = 0
+    c = [0, 4, 0, 1] #these are the coefficientes in eigenbasis
+    c = [1, 1, 1, 1] #these are the coefficientes in eigenbasis
+    # c = [2, 2.01, 1, 0] #these are the coefficientes in eigenbasis
+    e_ = QuantumRecurrencePlots._harmonicPotential_Escale(p)
+    e = λ[1:in] ./ e_
+    function prepare_s(ψ_coeffs, in)
+        # truncate the eigenbasis
+        s = ψ_coeffs[1:(in * 2), 1:in]
+        # normalize
+        for i in axes(s, 2)
+            s[:, i] ./= (norm(s[:, i]) .* sign(s[argmax(abs.(s[:, i])), i]))
         end
+        # make sure to delete small contributions
+        for i in eachindex(s)
+            if abs(s[i]) < 1e-8
+                s[i] = 0
+            end
+        end
+        return s
     end
+    s = prepare_s(ψ_coeffs, in)
+
+    t0 = 0.0
+    tmax = 2pi / e[1]
+    dt = (tmax - t0) / (p.nsols - 1)
+    seed = UInt32(42)
+    allsols = []
+    t = []
 
     alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
     fn = QuantumRecurrencePlots.make_nonlinearfunction_hermite_expansion_1D(c, e, s)
     prob = NonlinearProblem(fn, 0.0, [t0])
     _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
         prob, alg)
-    orig_sol = HC.solve(hcsys; alg.kwargs...)
-    allsols = HC.solutions(orig_sol)
-    println("\n\nCCCCCCCCCCCCC t=", t0, "\n")
-    @show HC.real_solutions(orig_sol) ./ α
+    orig_sol = HC.solve(hcsys; alg.kwargs..., seed = seed)
+    sol_0 = sort(HC.solutions(orig_sol); by = real)
+    push!(allsols, sol_0)
+    push!(t, t0)
 
     _, hcsys_ = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
-        remake(prob, p = [tmax / 2]), alg)
+        remake(prob, p = [dt]), alg)
 
     H = HC.StraightLineHomotopy(hcsys, hcsys_)
-    sol = HC.solve(H, allsols; alg.kwargs...)
-    println("\n\nCCCCCCCCCCCCC t=", tmax / 2, "\n")
-    @show HC.real_solutions(sol.path_results) ./ α
 
-    H.target.p[1] = tmax
-    sol = HC.solve(H, allsols; alg.kwargs...)
-    println("\n\nCCCCCCCCCCCCC t=", tmax, "\n")
-    @show HC.real_solutions(sol.path_results) ./ α
+    sol_1 = HC.solutions(HC.solve(H, sol_0; alg.kwargs..., seed = seed))
+    push!(allsols, sol_1)
+    push!(t, dt)
 
-    @show α
+    # for i in 1:(p.nsols - 2)
+    #     H.target.p[1] = (1 + i) * dt
+    #     push!(t, (1 + i) * dt)
+    #     sol = HC.solve(H, sol_0; alg.kwargs..., seed = seed)
+    #     push!(allsols, sort(HC.solutions(sol); by = real))
+    # end
 
-    return sol, H, hcsys, hcsys_
+    for i in 1:(p.nsols - 2)
+        H.target.p[1] = (1 + i) * dt
+        H.start.p[1] = (i) * dt
+        push!(t, (1 + i) * dt)
+        sol = HC.solve(H, allsols[end]; alg.kwargs..., seed = seed)
+        push!(allsols, HC.solutions(sol))
+    end
+
+    function poles_mov!(du, u, p, t)
+        @unpack σ² = p
+        for i in eachindex(du)
+            du[i] = -u[i] / 2
+            for j in eachindex(du)
+                if i != j
+                    du[i] += 1 / (u[i] - u[j])
+                end
+            end
+            du[i] *= -im * σ² / 2
+        end
+    end
+    tspan = (t0, dt * (p.nsols - 1))
+    u0 = [x[1] for x in sol_0]
+    pp = (σ² = 2 * p.ε_x^2 / p.ε_t * α^2 / e_,)
+    prob_diff = ODEProblem(poles_mov!, u0, tspan, pp)
+    sol_diff = OrdinaryDiffEq.solve(prob_diff, Vern7())
+
+    ts = range(t[1], t[end], 1000)
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    lines!(ax, ts, [x[1] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[1][1] for x in real.(allsols)])
+
+    lines!(ax, ts, [x[2] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[2][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[3] for x in real.(sol_diff.(ts))])
+
+    if length(allsols[end]) == 3
+        scatter!(ax, t, [x[3][1] for x in real.(allsols)])
+    end
+
+    display(fig)
+
+    return allsols, sol_diff, fn
 end
 
 # quartic potential
@@ -171,7 +161,8 @@ function main_()
         ħ = 12.0,       # hbar
         m = 2.0,       # mass of particle
         k_4 = 13.0,        # harmonic potential mω^2
-        τ = 4.22121    # τ times period of oscillation is the final time
+        τ = 4.22121,    # τ times period of oscillation is the final time
+        nsols = 50          # number of times to find the zeros >=2
     )
 
     # prepare the adimensional parameters, not all scales are independent
@@ -180,15 +171,6 @@ function main_()
     p = QuantumRecurrencePlots.make_quarticPotential_π_k(p)
 
     # now consider all adimensional variables
-
-    # Make grid finding optimal size knowing "last eigenstate"
-    pp = (n = 10, tol = 1e-4) # eigen state for size of grid
-    u0 = sqrt(pp.n * 2 - 1) # initial guess
-    f_to_opt(x, p) = exp(-x^2 / 2) * x^p.n - p.tol
-    prob = NonlinearProblem(f_to_opt, u0, pp)
-    x_max = NonlinearSolve.solve(prob, SimpleNewtonRaphson())[1]
-    L = 1 * x_max / sqrt(p.ε_t / p.ε_x^2)  # x_max gives the size scale, L must be greater than this
-    x = LinRange(-L / 2, L / 2 - L / p.N, p.N)
 
     n_h = 100
     m_h = 100
@@ -199,75 +181,135 @@ function main_()
     f_(x) = QuantumRecurrencePlots.quarticPotential(x, p) / α^4
     msp = MSP_matrix_1D(x_h, w_h, a, f_)
     H = msp.P + msp.S * 1 / 2 * p.ε_x^2 / p.ε_t * α^2 # we reescale the stiffnes matrix with the adimensional parameters
-    # λ, ψ_coeffs = eigs(H, msp.M; nev=round(Int, m_h/3), which=:LR,check=1,maxiter=10000,tol=1e-8, sigma=1e-3); # smallest
     λ, ψ_coeffs = eigen(H, msp.M) # note that arpack gives awfull results when M is not the identity
 
-    fig = Figure(size = (800, 800))
-    ax = Axis(fig[1, 1])
-    n_eigs = min(12, m_h - 1)#round(Int, m_h/3)
-    for i in 1:n_eigs #axes(ψ_coeffs, 2)
-        nn = maximum(sqrt.(abs2.(ψ_coeffs[:, i])))
-        scatter!(ax, (range(0, n_eigs - 1)), log10.(abs2.(ψ_coeffs[1:n_eigs, i] ./ nn)),
-            label = "$(i-1) eigenstate")
-    end
-    axislegend(ax, position = :rt)
-    ylims!(ax, -10, 1)
-
-    # display(fig)
-
-    ######
-    # Check MSP Eigen states evolve as expected
-    in = 6
-    c = ones(in)
-    c[(in - 1):in] .= 0 #last eigenvalues can have some errors
-    e = λ[1:in]
-    s = ψ_coeffs[1:(in * 2), 1:in]
-    tmax = 2pi / λ[1] * p.τ
-    t0 = 0.0
-    t = LinRange(t0, tmax, p.nt)
-    psi_0 = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, t0, c, e, s) .*
-            sqrt(α)
-    psi_t = QuantumRecurrencePlots.hermite_expansion_state_sum_1D(x .* α, tmax, c, e, s) .*
-            sqrt(α)
-    p = QuantumRecurrencePlots.makeParsFFT_1D(x .* α, p)
-    kin_(x) = QuantumRecurrencePlots.kineticEnergy(x, p) * α^2
-    psi_n = QuantumRecurrencePlots.solve_schr_SSFM_Yoshida(x .* α, t, p, psi_0, f_, kin_)
-
-    fig = Figure(size = (1200, 800))
-    QuantumRecurrencePlots.plot_comparison_1D!(fig, x, tmax, psi_n, psi_t)
-    # display(fig)
-
-    ######
-    # HC solver
-
-    for i in eachindex(s)
-        if abs(s[i]) < 1e-8
-            s[i] = 0
+    in = 8
+    c = zeros(in)
+    # c[round(Int, in / 2 + 1):in] .= 0 #last eigenvalues can have some errors
+    c[1:3] .= 1
+    e_ = QuantumRecurrencePlots._quarticPotential_Escale(p)
+    e = λ[1:in] ./ e_
+    @show diff(e)
+    function prepare_s(ψ_coeffs, in)
+        # truncate the eigenbasis
+        s = ψ_coeffs[1:(in * 2), 1:in]
+        # normalize
+        for i in axes(s, 2)
+            s[:, i] ./= (norm(s[:, i]) .* sign(s[argmax(abs.(s[:, i])), i]))
         end
+        # make sure to delete small contributions
+        for i in eachindex(s)
+            if abs(s[i]) < 1e-12
+                s[i] = 0
+            end
+        end
+        return s
     end
+    s = prepare_s(ψ_coeffs, in)
+
+    t0 = 0.0
+    tmax = 2pi / e[1]
+    dt = (tmax - t0) / (p.nsols - 1) * 1
+    seed = UInt32(42)
+    allsols = []
+    t = []
 
     alg = HomotopyContinuationJL{true}(; threading = false, autodiff = false)
     fn = QuantumRecurrencePlots.make_nonlinearfunction_hermite_expansion_1D(c, e, s)
     prob = NonlinearProblem(fn, 0.0, [t0])
     _, hcsys = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
         prob, alg)
-    orig_sol = HC.solve(hcsys; alg.kwargs...)
-    allsols = HC.solutions(orig_sol)
-    println("\n\nCCCCCCCCCCCCC t=", t0, "\n")
-    @show HC.real_solutions(orig_sol) ./ α
+    orig_sol = HC.solve(hcsys; alg.kwargs..., seed = seed)
+    sol_0 = sort(HC.solutions(orig_sol); by = x -> abs2.(x))
+    push!(allsols, sol_0)
+    push!(t, t0)
 
     _, hcsys_ = NonlinearSolveHomotopyContinuation.homotopy_continuation_preprocessing(
-        remake(prob, p = [tmax / 2]), alg)
+        remake(prob, p = [dt]), alg)
 
     H = HC.StraightLineHomotopy(hcsys, hcsys_)
-    sol = HC.solve(H, allsols; alg.kwargs...)
-    println("\n\nCCCCCCCCCCCCC t=", tmax / 2, "\n")
-    @show HC.real_solutions(sol.path_results) ./ α
 
-    H.target.p[1] = tmax
-    sol = HC.solve(H, allsols; alg.kwargs...)
-    println("\n\nCCCCCCCCCCCCC t=", tmax, "\n")
-    @show HC.real_solutions(sol.path_results) ./ α
+    sol_1 = HC.solutions(HC.solve(H, sol_0; alg.kwargs..., seed = seed))
+    push!(allsols, sol_1)
+    push!(t, dt)
 
-    return sol, H, hcsys, hcsys_
+    # for i in 1:(p.nsols - 2)
+    #     H.target.p[1] = (1 + i) * dt
+    #     push!(t, (1 + i) * dt)
+    #     sol = HC.solve(H, sol_0; alg.kwargs..., seed = seed)
+    #     push!(allsols, sort(HC.solutions(sol); by = real))
+    # end
+
+    for i in 1:(p.nsols - 2)
+        H.target.p[1] = (1 + i) * dt
+        H.start.p[1] = (i) * dt
+        push!(t, (1 + i) * dt)
+        sol = HC.solve(H, allsols[end]; alg.kwargs..., seed = seed)
+        push!(allsols, HC.solutions(sol))
+    end
+
+    function poles_mov!(du, u, p, t)
+        @unpack σ², fp_u = p
+        for i in eachindex(du)
+            du[i] = -u[i] / 2 + sum(1 ./ (u[i] .- fp_u))
+            for j in eachindex(du)
+                if i != j
+                    du[i] += 1 / (u[i] - u[j])
+                end
+            end
+            du[i] *= -im * σ² / 2
+        end
+    end
+    tspan = (t0, dt * (p.nsols - 1))
+    nm_p = 2
+    u0 = [x[1] for x in sol_0[1:nm_p]]
+    pp = (σ² = 2 * p.ε_x^2 / p.ε_t * α^2 / e_,
+        fp_u = [x[1] for x in sol_0[(nm_p + 1):end]])
+    prob_diff = ODEProblem(poles_mov!, u0, tspan, pp)
+    sol_diff = OrdinaryDiffEq.solve(prob_diff, Vern7(), dtmax = dt / 10)
+
+    ts = range(t[1], t[end], 1000)
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    lines!(ax, ts, [x[1] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[1][1] for x in real.(allsols)])
+
+    lines!(ax, ts, [x[2] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[2][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[3] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[3][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[4] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[4][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[5] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[5][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[6] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[6][1] for x in real.(allsols)])
+
+    # lines!(ax, ts, [x[7] for x in real.(sol_diff.(ts))])
+
+    scatter!(ax, t, [x[7][1] for x in real.(allsols)])
+
+    display(fig)
+
+    # it seems that zeros in HC depends a lot on the parameter in and s<small
+    # and the evolution on poles_mov! is very unstable, probably because we do not
+    # know the actual poles, or the actual exp(fx), we can see from c[1]=1 that should
+    # not have poles but we find them, so maybe this hermite expansion is not the best one
+    # or if it is, we are evolving grongly the state, maybe use Yoshida method instead of
+    # eigensystem, because this has error, we have a test to show that, the problem is to track
+    # the poles, in quartic potential, but maybe we can prove the equations on harmonic potential
+    # well all works fine
+    # USE SOME FIXED POLES ON QUARTIC
+
+    return allsols, sol_diff, fn
 end

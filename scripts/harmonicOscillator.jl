@@ -140,27 +140,6 @@ end
 ####################################
 # eigen states harmonic oscillator #
 ####################################
-function main_1()
-    # Set up simulation parameters
-    p = (
-        N = 2048 * 2,      # Number of grid points (higher for better accuracy)
-        nt = 10000,     # number of time steps
-        τ = 4.22121,    # τ times period of oscillation is the final time
-        # the following parameters have units
-        L_0 = 1.0,    # Length scale
-        E_0 = 10.0,     # Energy scale
-        T_0 = 1.0,     # Time scale
-        ħ = 1.0,       # hbar
-        m = 2.0,       # mass of particle
-        k_2 = 1.0        # harmonic potential mω^2
-    )
-
-    # prepare the adimensional parameters, not all scales are independent
-    p = make_ε_x(p)
-    p = make_ε_t(p)
-    p = QuantumRecurrencePlots.make_harmonicPotential_π_k(p)
-end
-
 # ssfm
 function main__()
     p = (
